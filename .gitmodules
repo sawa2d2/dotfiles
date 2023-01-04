@@ -1,0 +1,4 @@
+[submodule "private.d"]
+	path = private.d
+	url = git@github.com:sawa2d2/private.d.git
+	branch = main
