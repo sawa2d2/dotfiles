@@ -1,0 +1,52 @@
+#/bin/bash
+
+# This script adds a prefix to your commit message interactively,
+# such as "[update]", etc,
+# i.e. it's a command shortened the folowwing command:
+# `git commit -m "[PREFIX] COMMIT_MESSAGE`
+
+echo_prefix_options() {
+  echo "u) update"
+  echo "f) fix"
+  echo "a) add"
+  echo "r) remove"
+  echo "N) [No prefix]"
+}
+
+usage() {
+  echo "Usage:"
+  echo "  gcm [PREFIX_TYPE]"
+}
+
+if [ $# == 0 ]; then
+  echo "Select a prefix for commit message." 
+  echo_prefix_options
+  PS3="Enter the first latter of a prefix: "
+  read TYPE
+elif [ $# == 1]; then
+  TYPE=$1
+else
+  echo "Argument error."
+  usage
+  exit 1
+fi
+
+while : ; do
+  case $TYPE in
+    u) prefix="[update] "; break ;;
+    f) prefix="[fix] "; break ;;
+    a) prefix="[add] "; break ;;
+    r) prefix="[remove] "; break ;;
+    N) prefix="[] "; break ;;
+    *)
+      echo "Error: Enter a first latter of the following list."
+      echo_prefix_options
+      exit 1
+    ;;
+  esac
+done
+
+echo "Type commit message: "
+read commit_message
+
+git commit -m "$prefix $commit_message"

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+DIR=$(cd $(dirname $0) && pwd)
+
+function usage {
+  cat <<EOF
+Usage: $(basename "$0") [OPTION]...
+  -h        Display help
+  -r        Run as rootless mode
+EOF
+# -a VALUE   Hoge
+
+  exit 2
+}
+
+while getopts ":rh" OPT; do
+  case "$OPT" in
+    r)
+      IS_ROOTLESS=true
+      ;;
+#    a)
+#      echo "-a = ${OPTARG}"
+#      ;;
+    *)
+      usage
+      ;;
+  esac
+done
+
+if test "$IS_ROOTLESS" == "true"; then
+  podman machine set --rootful=false
+else
+  podman machine set --rootful=true
+fi
+
+$DIR/poi
+$DIR/pos

@@ -1,0 +1,40 @@
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[push]
+	default = current
+[alias]
+	br = branch
+	bra = branch -a
+	mkbr = checkout -b
+	fxbr = branch -m
+	st = status -sb
+	sta = status -sb -uall
+	df = diff
+	a = add
+	aa = add -A
+	cm = commit -m
+	fxcm = commit --amend -m
+	ph = !git push origin `git rev-parse --abbrev-ref HEAD`
+	rb = rebase -i
+	fe = fetch
+	co = checkout
+	sh = stash
+	sha = stash -u
+	shp = stash pop
+	rs = reset
+	
+	se = browse
+	pr = pull-request
+	fk = fork
+
+	gr = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+	gra = log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+[merge]
+	ff = false
+[pull]
+	ff = only
+[core]
+	editor = vi

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# Memo:
+# docker-compose を使用するさい、volume は /mnt/<local_path> のように指定してやる。
+# <local_path> のみ指定した場合、次のようなエラーが出てしまうだろう：
+# ```
+# Error response from daemon: make cli opts(): error making volume mountpoint for volume <local_path>: mkdir /Users: operation not permitted 
+# ```
+
+podman machine init \
+    --volume /Users:/mnt/Users \
+    --volume /Volumes:/mnt/Volumes \
+    --volume /private:/mnt/private \
+    --volume /tmp:/mnt/tmp \
+    --volume /var/folders:/mnt/var/folders \
+    "$@"
+

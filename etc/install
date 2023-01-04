@@ -1,0 +1,22 @@
+#!/bin/sh
+
+DOTPATH=~/dotfiles
+
+cd $DOTPATH
+
+echo ' '\
+'     _       _    __ _ _            '"\n" \
+'  __| | ___ | |_ / _(_) | ___  ___  '"\n" \
+' / _` |/ _ \| __| |_| | |/ _ \/ __| '"\n" \
+'| (_| | (_) | |_|  _| | |  __/\__ \ '"\n" \
+' \__,_|\___/ \__|_| |_|_|\___||___/ '"\n"
+
+for f in .??*
+do
+  [ "$f" = ".git" ] && continue
+  [ "$f" = ".gitignore" ] && continue
+  [ "$f" = ".DS_Store" ] && continue
+  ln -snfv "$DOTPATH/$f" "$HOME/$f"
+done
+
+ln -snfv "$DOTPATH/bin" "$HOME/bin"
