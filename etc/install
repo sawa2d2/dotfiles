@@ -21,3 +21,8 @@ do
 done
 
 ln -snfv "$DOTPATH/bin" "$HOME/bin"
+
+if [ -e $DOTPATH/private.d/etc/install ]; then
+  echo "+++private.d"
+  $DOTPATH/private.d/etc/install 
+fi
