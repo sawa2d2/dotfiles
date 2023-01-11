@@ -11,6 +11,16 @@ echo ' '\
 '| (_| | (_) | |_|  _| | |  __/\__ \ '"\n" \
 ' \__,_|\___/ \__|_| |_|_|\___||___/ '"\n"
 
+
+if [ $SHELL = "/bin/zsh" ]; then
+  echo "Install Oh My Zsh"
+  sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
+if [ $SHELL = "/bin/bash" ]; then
+  echo "Install Oh My Bash"
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)"
+fi
+
 for f in .??*
 do
   [ "$f" = ".git" ] && continue
