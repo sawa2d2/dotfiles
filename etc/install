@@ -1,7 +1,6 @@
 #!/bin/sh
 
-DOTPATH=~/dotfiles
-
+DOTPATH=$(cd $(cd $(dirname $0) && pwd)/../ && pwd)
 cd $DOTPATH
 
 echo ' '\
