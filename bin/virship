@@ -1,0 +1,3 @@
+#!/bin/bash
+virsh list --all | awk '{print $2}' | tail -n +3 | xargs -i sh -c "echo {}: && virsh domifaddr {} | tail -n +3 | head -n -1 "
+

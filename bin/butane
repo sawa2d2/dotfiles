@@ -1,0 +1,2 @@
+#!/bin/sh
+podman run -i --rm quay.io/coreos/butane:release --pretty --strict $@
