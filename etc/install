@@ -3,13 +3,14 @@
 DOTPATH=$(cd $(cd $(dirname $0) && pwd)/../ && pwd)
 cd $DOTPATH
 
-echo ' '\
-'     _       _    __ _ _            '"\n" \
-'  __| | ___ | |_ / _(_) | ___  ___  '"\n" \
-' / _` |/ _ \| __| |_| | |/ _ \/ __| '"\n" \
-'| (_| | (_) | |_|  _| | |  __/\__ \ '"\n" \
-' \__,_|\___/ \__|_| |_|_|\___||___/ '"\n"
+cat <<EOF
+     _       _    __ _ _
+  __| | ___ | |_ / _(_) | ___  ___
+ / _\` |/ _ \| __| |_| | |/ _ \/ __|
+| (_| | (_) | |_|  _| | |  __/\__ \\
+ \__,_|\___/ \__|_| |_|_|\___||___/
 
+EOF
 
 if [ $SHELL = "/bin/zsh" ]; then
   echo "Install Oh My Zsh"
@@ -31,7 +32,13 @@ done
 
 ln -snfv "$DOTPATH/bin" "$HOME/bin"
 
+echo ""
+echo "Create simbolic links from config.d/* to ~/.config/*"
+$DOTPATH/etc/install_config.py
+
+## Call private.d/etc/install
 if [ -e $DOTPATH/private.d/etc/install ]; then
   echo "+++private.d"
   $DOTPATH/private.d/etc/install 
 fi
+
