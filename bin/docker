@@ -1,2 +1,13 @@
-#!/bin/sh
-podman "$@"
+#/bin/sh
+if command -v nerdctl 1>/dev/null 2>&1; then
+    runtime="nerdctl"
+elif command -v podman 1>/dev/null 2>&1; then
+    runtime="podman"
+elif command -v docker 1>/dev/null 2>&1; then
+    runtime="docker"
+else
+    echo "No container runtime found"
+    exit 1
+fi
+
+$runtime $@

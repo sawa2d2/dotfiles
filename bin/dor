@@ -1,2 +1,2 @@
 #!/bin/sh
-podman container run -it --rm "$@"
+docker container run -it --rm "$@"

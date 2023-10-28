@@ -1,2 +1,2 @@
 #!/bin/sh
-podman exec -it "$@"
+docker exec -it "$@"
