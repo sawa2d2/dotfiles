@@ -12,6 +12,7 @@ cat <<EOF
 
 EOF
 
+# Install external modules
 if [ $SHELL = "/bin/zsh" ]; then
   echo "Install Oh My Zsh"
   sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
@@ -20,6 +21,11 @@ if [ $SHELL = "/bin/bash" ]; then
   echo "Install Oh My Bash"
   bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)"
 fi
+if [ -d "$HOME/" ]; then
+  bash -c "$(curl -fsSL https://raw.githubusercontent.com/ohmybash/oh-my-bash/master/tools/install.sh)"
+  curl -L https://raw.githubusercontent.com/ahmetb/kubectl-aliases/master/.kubectl_aliases -o ~/.kubectl_aliases
+fi
+
 
 for f in .??*
 do

@@ -49,6 +49,7 @@ nmap <C-w><left> <C-w><
 nmap <C-w><right> <C-w>>
 nmap <C-w><up> <C-w>+
 nmap <C-w><down> <C-w>-
+imap <C-c> <Esc>
 
 "tab
 nmap <S-L> gt

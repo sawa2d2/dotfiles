@@ -1,0 +1,8 @@
+#!/bin/bash
+podman images kompose | grep kompose > /dev/null
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "building a kompose container image..."
+  podman image build -t kompose https://github.com/kubernetes/kompose.git
+fi
+podman container run --rm -it -v $PWD:/opt kompose sh -c "cd /opt && kompose $@"

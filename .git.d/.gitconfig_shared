@@ -10,7 +10,7 @@
 	bra = branch -a
 	mkbr = checkout -b
 	fxbr = branch -m
-	st = status -sb
+	st = status -sb .
 	sta = status -sb -uall
 	df = diff
 	a = add
