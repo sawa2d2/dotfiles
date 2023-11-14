@@ -1,8 +1,8 @@
 #!/bin/bash
 
-dns_ip=192.168.122.1
-bridge=virbr0
-domain=example.com
+dns_ip=192.168.126.1
+bridge=tt0
+domain=ocp4.example.com
 
 echo DNS IP: $dns_ip
 echo Bridge: $bridge
