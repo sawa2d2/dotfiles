@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function kubespray() {
+  yaml_name=$1
+  docker run --rm -i --mount type=bind,source="$(pwd)"/inventory,dst=/inventory --mount type=bind,source="${HOME}"/.ssh/id_rsa,dst=/root/.ssh/id_rsa quay.io/kubespray/kubespray:v2.23.1 bash <<EOF
+ansible-playbook -i /inventory/hosts.yaml $yaml_name.yaml
+EOF
+}
+
+case "$1" in
+  cluster)
+    kubespray cluster
+    ;;
+  reset)
+    kubespray reset
+    ;;
+  *)
+    echo "Usage: $0 {cluster|reset}"
+    exit 1
+    ;;
+esac

@@ -1,2 +1,13 @@
-#!/bin/sh
-podman run -i --rm quay.io/coreos/butane:release --pretty --strict $@
+#!/bin/bash
+
+usage() {
+  echo "Usage:"
+  echo "  $ butane BUTANE_FILE > foo.ign"
+  exit 1
+}
+
+if [ "$#" -ne 1 ]; then
+    usage
+fi
+
+podman run -i --rm quay.io/coreos/butane:release --pretty --strict < $1
