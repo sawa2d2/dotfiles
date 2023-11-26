@@ -6,6 +6,8 @@
 [push]
 	default = current
 [alias]
+	m = merge
+	sqm = merge --ff --squash
 	br = branch
 	bra = branch -a
 	mkbr = checkout -b
@@ -14,9 +16,11 @@
 	sta = status -sb -uall
 	df = diff
 	a = add
-	aa = add -A
+	aa = add .
+	ap = add -p
+	us = reset HEAD
 	cm = commit -m
-	fxcm = commit --amend -m
+	am = commit --amend -m
 	ph = !git push origin `git rev-parse --abbrev-ref HEAD`
 	rb = rebase -i
 	fe = fetch
@@ -24,12 +28,9 @@
 	sh = stash
 	sha = stash -u
 	shp = stash pop
-	rs = reset
-	
-	se = browse
-	pr = pull-request
-	fk = fork
-
+#	se = browse
+#	pr = pull-request
+#	fk = fork
 	gr = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
 	gra = log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
 [merge]
