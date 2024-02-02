@@ -1,0 +1,10 @@
+#!/bin/bash
+# Script for https://github.com/sawa2d2/k8s-on-kvm/tree/main/okd
+
+rm -r bootstrap.ign master.ign worker.ign metadata.json .openshift_install.log .openshift_install_state.json auth/
+cp install-config.yaml.backup install-config.yaml && openshift-install create ignition-configs
+terraform init -upgrade
+terraform apply -auto-approve
+mkdir -p ~/.kube
+chmod 600 auth/kubeconfig
+cp auth/kubeconfig ~/.kube/okd.conf
