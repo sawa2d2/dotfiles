@@ -1,10 +1,18 @@
 #!/bin/bash
-# Script for https://github.com/sawa2d2/k8s-on-kvm/tree/main/okd
+rm -rf ocp
+mkdir -p ocp image_cache files_cache
+cp *.yaml ocp/
+docker run --privileged --rm \
+    -v $PWD:/data \
+    -v ./image_cache:/root/.cache/agent/image_cache \
+    -v ./files_cache:/root/.cache/agent/files_cache \
+    -w /data openshift-install:latest \
+    --dir ocp agent create image
+for i in 1 2 3; do scp ./ocp/agent.x86_64.iso root@10.0.0.10${i}:/home/images/; done
+for i in 1 2 3; do (cd nuc0${i} && terraform init -upgrade); done
+for i in 1 2 3; do (cd nuc0${i} && terraform apply -auto-approve); done
 
-rm -r bootstrap.ign master.ign worker.ign metadata.json .openshift_install.log .openshift_install_state.json auth/
-cp install-config.yaml.backup install-config.yaml && openshift-install create ignition-configs
-terraform init -upgrade
-terraform apply -auto-approve
+# Copy kubeconfig to $HOME/.kube
 mkdir -p ~/.kube
-chmod 600 auth/kubeconfig
-cp auth/kubeconfig ~/.kube/okd.conf
+chmod 600 ocp/auth/kubeconfig
+cp ocp/auth/kubeconfig ~/.kube/okd.conf
