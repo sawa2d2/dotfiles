@@ -1,0 +1,4 @@
+#!/bin/bash
+# Usage:
+#   $ kesh <container-name>
+oc exec -it $@ -- /bin/sh
