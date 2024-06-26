@@ -11,4 +11,4 @@ if [[ -z $node ]]; then
 fi
 oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoExecute
 oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoSchedule
-shot_taint
+show_taint

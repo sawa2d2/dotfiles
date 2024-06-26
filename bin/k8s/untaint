@@ -10,4 +10,4 @@ if [[ -z $node ]]; then
   exit 1
 fi
 oc adm taint nodes $node node.kubernetes.io/out-of-service-
-shot_taint
+show_taint
