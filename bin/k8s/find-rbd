@@ -3,7 +3,7 @@
 usage()
 {
   echo "Usage:"
-  echo "  ./find_rbd.sh <pvname>"
+  echo "  find-rbd <pvname>"
 }
 
 # Parse arguments
