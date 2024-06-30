@@ -1,0 +1,14 @@
+#!/bin/bash
+
+url_base=$(git config --get remote.origin.url | sed -e 's/\:/\//' -e 's/git\@\(.*\)\.git/https:\/\/\1/g')
+echo $url_base
+current_branch=$(git branch | grep "*" | cut -b 3-)
+
+git remote show origin | grep "\ *$current_branch\ *tracked$" | sed -e 's/.*:\ *\(.*\)/\1/g' > /dev/null 2>&1
+does_exist_in_remote=$?
+if [[ does_exist_in_remote -eq 0 ]]; then
+  open $url_base/tree/$current_branch
+  exit 0
+fi
+echo "Remote branch not found named \"$current_branch\""
+exit 1

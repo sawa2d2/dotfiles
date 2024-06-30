@@ -1,0 +1,6 @@
+#!/bin/bash
+source_branch=$(git branch | grep "*" | cut -b 3-)
+target_branch=$(git remote show origin | grep 'HEAD branch' | sed -e 's/.*:\ *\(.*\)/\1/g')
+#target=$(git show-branch | grep "*" | grep -v "$(git rev-parse --abbrev-ref HEAD)" | head -1 | awk -F'[]~^[]' '{print $2}')
+echo "$target_branch <- $source_branch"
+open $(git config --get remote.origin.url | sed -e 's/\:/\//' -e 's/git\@\(.*\)\.git/https:\/\/\1/g')/compare/$target_branch...$source_branch#files_bucket
