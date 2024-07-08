@@ -7,7 +7,7 @@ function show_taint()
 }
 if [[ -z $node ]]; then
   show_taint
-  exit 1
+  exit 0
 fi
 oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoExecute
 oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoSchedule

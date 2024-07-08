@@ -1,0 +1,35 @@
+#!/bin/bash
+
+function usage()
+{
+    echo "Usage:"
+    echo "  create-nodeport <service> <namespace>"
+    exit 1
+}
+
+# Parse arguments
+if [ $# -ne 2 ]; then
+    usage
+fi
+
+SERVICE=$1
+NAMESPACE=$2
+
+if [ -z "$SERVICE" ] || [ -z "$NAMESPACE" ]; then
+    usage
+fi
+
+# Check if the srevice exists
+if ! oc get service "$SERVICE" -n "$NAMESPACE" > /dev/null 2>&1; then
+    echo "Error: Service '$SERVICE' not found in namespace '$NAMESPACE'."
+    exit 1
+fi
+
+oc get service $SERVICE -n $NAMESPACE -o yaml |\
+yq e 'del(.spec.allocateLoadBalancerNodePorts)' |\
+yq e '.metadata.name += "-external"' |\
+yq e 'del(.spec.clusterIP)' |\
+yq e 'del(.spec.clusterIPs)' |\
+yq e 'del(.spec.ports[].nodePort)' |\
+yq e '.spec.type = "NodePort"' |\
+kubectl apply -f -

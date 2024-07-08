@@ -1,0 +1,2 @@
+#!/bin/bash
+vim $HOME/.git.d/.gitconfig_shared

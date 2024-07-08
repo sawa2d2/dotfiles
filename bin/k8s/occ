@@ -1,0 +1,9 @@
+#!/bin/bash
+context=$1
+
+if [[ -z $context ]]; then
+  oc config get-contexts
+  exit 0
+fi
+
+oc config use-context "$@"
