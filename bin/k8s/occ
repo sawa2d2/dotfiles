@@ -2,8 +2,8 @@
 context=$1
 
 if [[ -z $context ]]; then
-  oc config get-contexts
+  selected_context=$(oc config get-contexts --no-headers | peco --layout=bottom-up)
+  name=$(echo "${selected_context#"*"}" | awk '{print $1}')
+  oc config use-context "$name"
   exit 0
 fi
-
-oc config use-context "$@"
