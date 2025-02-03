@@ -15,13 +15,14 @@
 	st = status -sb .
 	sta = status -sb -uall
 	df = diff
+	t = tag
 	a = add
 	aa = add .
 	ap = add -p
 	us = reset HEAD
 	cm = commit -m
 	am = commit --amend -m
-	ph = !git push origin `git rev-parse --abbrev-ref HEAD`
+	ph = !git push origin `git rev-parse --abbrev-ref --tags HEAD`
 	rb = rebase -i
 	fe = fetch
 	co = checkout
