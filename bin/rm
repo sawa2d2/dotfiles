@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# https://github.com/andreafrancia/trash-cli
+# Install: $ pip install trash-cli
+~/.local/bin/trash-put "$@"
