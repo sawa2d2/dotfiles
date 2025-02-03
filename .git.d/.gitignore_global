@@ -1,9 +1,11 @@
+00/
+.wiki/
+
 *~
 .DS_Store
 *.log
 *.swp
 *.bak
-00/
 
 # Local .terraform directories
 **/.terraform/*
@@ -43,6 +45,6 @@ terraform.rc
 # Ignore dependency lock files
 .terraform.lock.hcl
 
-# drawio
+# draw.io
 *.bkp
 *.dtmp

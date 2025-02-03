@@ -1,0 +1,6 @@
+#!/bin/bash
+
+owner_repo=$(show-owner-and-repo)
+echo $owner_repo
+git clone https://github.com/${owner_repo}.wiki.git .wiki
+
