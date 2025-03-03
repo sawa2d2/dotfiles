@@ -1,0 +1,20 @@
+#!/bin/bash
+
+BRANCH=$1
+
+if [ "$#" -eq 0 ]; then
+  current_branch=$(git rev-parse --abbrev-ref HEAD)
+  BRANCH=${current_branch}
+fi
+
+GIT_PROJECT_ROOT=$(git rev-parse --show-toplevel)
+PREFIX=00wt
+MAIN_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+WORKTREE_PATH=${GIT_PROJECT_ROOT}/${PREFIX}-${BRANCH}
+
+echo $WORKTREE_PATH
+git stash -u
+git checkout ${MAIN_BRANCH}
+git worktree add ${WORKTREE_PATH} ${BRANCH}
+cd ${WORKTREE_PATH}
+git stash pop
