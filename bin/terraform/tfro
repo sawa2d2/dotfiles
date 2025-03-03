@@ -1,2 +1,2 @@
 #!/bin/bash
-terraform refresh && terraform output $@
+vf refresh && vf output $@

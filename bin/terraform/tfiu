@@ -1,2 +1,2 @@
 #!/bin/bash
-terraform init -upgrade
+tfi -upgrade

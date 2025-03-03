@@ -1,2 +1,2 @@
 #!/bin/bash
-terraform plan $@
+tf plan $@
