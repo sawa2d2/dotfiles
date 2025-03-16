@@ -1,0 +1,2 @@
+#!/bin/bash
+oc patch storagecluster ocs-storagecluster -n openshift-storage --type=merge -p '{"spec":{"enableCephTools":true}}'
