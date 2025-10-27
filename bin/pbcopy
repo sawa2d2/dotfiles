@@ -1,2 +1,3 @@
 #!/bin/bash
-cat | xsel --clipboard --input
+# Remove ANSI color escape sequences and copy the clean text to clipboard
+cat | sed -r "s/\x1B\[[0-9;]*[mK]//g" | xsel --clipboard --input
