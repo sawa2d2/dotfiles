@@ -16,5 +16,4 @@ echo $WORKTREE_PATH
 git stash -u
 git checkout ${MAIN_BRANCH}
 git worktree add ${WORKTREE_PATH} ${BRANCH}
-cd ${WORKTREE_PATH}
 git stash pop
