@@ -1,0 +1,24 @@
+#!/bin/bash
+set -ueC
+
+SHARED_DIR="${SHARED_DIR:-/mnt/ext/shared}"
+
+usage() {
+  echo "Usage: $0 <domain1> [domain2 ...]"
+  echo "Optional: SHARED_DIR=/path/to/shared $0 <domain1> [domain2 ...]"
+}
+
+if [ $# -eq 0 ]; then
+  usage
+  exit 1
+fi
+
+for domain in "$@"; do
+  virsh detach-device "$domain" /dev/stdin --live --config <<EOF
+<filesystem type="mount" accessmode="passthrough">
+  <driver type="virtiofs" queue="1024"/>
+  <source dir="${SHARED_DIR}"/>
+  <target dir="/mnt/shared"/>
+</filesystem>
+EOF
+done
