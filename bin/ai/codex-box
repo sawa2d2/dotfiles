@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+docker build -t codex-cli "$SCRIPT_DIR" -f codex.Dockerfile
+docker run --rm -it \
+  -p 1455:1455 \
+  -v "$PWD:/workspace" \
+  -v codex-config:/root/.codex \
+  -e CODEX_ACCESS_TOKEN \
+  codex-cli "$@"

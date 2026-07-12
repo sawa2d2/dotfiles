@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+NAME="claude-code"
+IMAGE="claude-code"
+
+podman build -t "$IMAGE" "$SCRIPT_DIR" -f claude.Dockerfile
+
+if ! podman container exists "$NAME"; then
+  podman run -d \
+    --name "$NAME" \
+    -v "$PWD:/workspace:Z" \
+    -v claude-home:/root \
+    -e ANTHROPIC_API_KEY \
+    "$IMAGE"
+elif [[ "$(podman inspect -f '{{.State.Status}}' "$NAME")" != "running" ]]; then
+  podman start "$NAME" >/dev/null
+fi
+
+podman exec -it -w /workspace "$NAME" claude "$@"

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+podman rm -f claude-code 2>/dev/null || true
