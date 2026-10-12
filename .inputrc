@@ -2,6 +2,28 @@
 # Preserve system defaults, including standard key bindings.
 $include /etc/inputrc
 
+# Case-insensitive completion
 set completion-ignore-case on
+
+# Show differences when case does not match
+set completion-map-case on
+
+# Show ambiguous completion candidates immediately
+set show-all-if-ambiguous on
+
+# Append slash to completed directory names
+set mark-directories on
+
+# Show file types in completion lists
+set visible-stats on
+
+# Color completion candidates
+set colored-stats on
+
+# Color common prefixes in completion lists
+set colored-completion-prefix on
+
+# Disable automatic binding of terminal special characters
 set bind-tty-special-chars off
+
 "\C-w": backward-kill-word
