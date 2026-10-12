@@ -1,6 +1,7 @@
 #!/bin/sh
+set -eu
 
-DOTPATH=$(cd "$(dirname "$0")/.." && pwd)
+DOTPATH=$(cd "$(dirname "$0")" && pwd)
 cd "$DOTPATH" || exit 1
 
 printf '\033[38;2;27;175;181m'
@@ -30,10 +31,8 @@ ln -snfv "$DOTPATH/bin" "$HOME/bin"
 
 echo ""
 echo "Create symbolic links from config.d/* to ~/.config/*"
-"$DOTPATH/etc/install_config.py"
 
-# Call private.d/etc/install
-# if [ -e "$DOTPATH/private.d/etc/install" ]; then
-#   echo "+++private.d"
-#   "$DOTPATH/private.d/etc/install"
-# fi
+if [ -e "$DOTPATH/private.d/install" ]; then
+  echo "+++private.d"
+  "$DOTPATH/private.d/install"
+fi
