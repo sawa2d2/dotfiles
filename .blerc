@@ -1,0 +1,3 @@
+# ~/.blerc
+ble-bind -m auto_complete -f TAB auto_complete/insert
+ble-bind -m auto_complete -f C-i auto_complete/insert

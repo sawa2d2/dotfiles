@@ -4,6 +4,11 @@ case $- in
       *) return ;;
 esac
 
+# Initialize ble.sh (without attaching yet)
+if [[ -f "$HOME/.local/share/blesh/ble.sh" ]]; then
+    source "$HOME/.local/share/blesh/ble.sh" --attach=none
+fi
+
 # Locale and editor
 export LANG=en_US.UTF-8
 export EDITOR=vim
@@ -64,3 +69,5 @@ if [[ -z ${TMUX:-} && -t 0 && -t 1 ]] && command -v tmux >/dev/null 2>&1; then
     tmux -u new-session
 fi
 
+# Attach ble.sh after shell initialization
+type ble-attach &>/dev/null && ble-attach
