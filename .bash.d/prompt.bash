@@ -16,12 +16,8 @@ if ! declare -F __git_ps1 >/dev/null; then
     done
 fi
 
-# Git colors (True Color).
-_PROMPT_GIT_CLEAN='\[\e[1;38;2;85;201;166m\]'   # Sea Green
-_PROMPT_GIT_DIRTY='\[\e[1;38;2;229;164;91m\]'   # Amber
-_PROMPT_GIT_STAGED='\[\e[1;38;2;112;174;224m\]' # Blue
-_PROMPT_GIT_MIXED='\[\e[1;38;2;226;121;131m\]'  # Red
-_PROMPT_RESET='\[\e[0m\]'
+# Git prompt colors are generated from theme/colors.sh.
+source "$DOTPATH/theme/generated/bash-prompt.bash"
 
 # Abbreviate the working directory to its last two components.
 _prompt_path() {
