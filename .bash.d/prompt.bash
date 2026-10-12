@@ -61,6 +61,10 @@ _prompt_path() {
 # Build the prompt.
 _prompt_command() {
     local status=$?
+
+    history -a
+    history -n
+
     local path branch="" dirty="" staged=""
     local git_color
 

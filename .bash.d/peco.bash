@@ -1,5 +1,3 @@
-export HISTCONTROL="ignoredups"
-
 peco_search_history() {
 	local l=$(HISTTIMEFORMAT= history | \
 	sort -r | sed -E s/^\ *[0-9]\+\ \+// | \

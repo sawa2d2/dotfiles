@@ -1,0 +1,6 @@
+# Readline settings (shared with programs using GNU Readline).
+# Preserve system defaults, including standard key bindings.
+$include /etc/inputrc
+
+set bind-tty-special-chars off
+"\C-w": backward-kill-word
