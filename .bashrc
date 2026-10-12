@@ -11,6 +11,7 @@ fi
 
 # Locale and editor
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
 export EDITOR=vim
 export MAGICK=convert
 
