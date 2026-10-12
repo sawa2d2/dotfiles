@@ -11,7 +11,7 @@ alias rd='rmdir'
 alias rm='trash-put'
 
 # Directory listing
-alias ls='ls --color=auto -1FA'
+alias ls='ls --color=auto -FA'
 alias l='\ls -lhA'
 alias ll='\ls -lh'
 alias la='\ls -lha'
