@@ -32,7 +32,7 @@ ln -snfv "$DOTPATH/bin" "$HOME/bin"
 # Generate and install shared theme
 if [ -x "$DOTPATH/theme/sync" ]; then
   echo "Generate theme configurations"
-  "$DOTPATH/theme/sync"
+  "$DOTPATH/theme/sync" teal
 
   ln -snfv "$DOTPATH/.tmux.theme.conf" "$HOME/.tmux.theme.conf"
   ln -snfv "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
