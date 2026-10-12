@@ -2,5 +2,6 @@
 # Preserve system defaults, including standard key bindings.
 $include /etc/inputrc
 
+set completion-ignore-case on
 set bind-tty-special-chars off
 "\C-w": backward-kill-word

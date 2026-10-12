@@ -58,8 +58,8 @@ _prompt_path() {
 _prompt_command() {
     local status=$?
 
-    history -a
-    history -n
+    #history -a
+    #history -n
 
     local path branch="" dirty="" staged=""
     local git_color

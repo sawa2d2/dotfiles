@@ -25,14 +25,14 @@ export DOTPATH="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 # History
 shopt -s histappend
 HISTCONTROL=ignoreboth
-HISTSIZE=100000
-HISTFILESIZE=200000
+HISTSIZE=10000
+HISTFILESIZE=20000
 
 # Synchronize history across sessions without duplicating the hook
-case ";${PROMPT_COMMAND:-};" in
-    *';history -a; history -n;'*) ;;
-    *) PROMPT_COMMAND="history -a; history -n${PROMPT_COMMAND:+; $PROMPT_COMMAND}" ;;
-esac
+#case ";${PROMPT_COMMAND:-};" in
+#    *';history -a; history -n;'*) ;;
+#    *) PROMPT_COMMAND="history -a; history -n${PROMPT_COMMAND:+; $PROMPT_COMMAND}" ;;
+#esac
 
 # Terminal
 shopt -s checkwinsize

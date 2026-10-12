@@ -1,4 +1,5 @@
 # ~/.blerc
-bleopt history_limit_length=1000
+#bleopt history_share=1
+bleopt history_limit_length=2000
 ble-bind -m auto_complete -f TAB auto_complete/insert
 ble-bind -m auto_complete -f C-i auto_complete/insert
