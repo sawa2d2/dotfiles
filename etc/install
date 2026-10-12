@@ -1,8 +1,9 @@
 #!/bin/sh
 
-DOTPATH=$(cd $(cd $(dirname $0) && pwd)/../ && pwd)
-cd $DOTPATH
+DOTPATH=$(cd "$(dirname "$0")/.." && pwd)
+cd "$DOTPATH" || exit 1
 
+printf '\033[38;2;27;175;181m'
 cat <<EOF
      _       _    __ _ _
   __| | ___ | |_ / _(_) | ___  ___
@@ -11,25 +12,28 @@ cat <<EOF
  \__,_|\___/ \__|_| |_|_|\___||___/
 
 EOF
+printf '\033[0m'
+
+DEFAULT_SHELL=$(basename "$(getent passwd "$(id -un)" | cut -d: -f7)")
 
 for f in .??*
 do
-  [ "$f" = ".git" ] && continue
-  [ "$f" = ".gitignore" ] && continue
-  [ "$f" = ".config" ] && continue
-  [ "$f" = ".DS_Store" ] && continue
+  case "$f" in
+    .git|.gitignore|.config|.DS_Store) continue ;;
+    .bashrc) [ "$DEFAULT_SHELL" = bash ] || continue ;;
+    .zshrc)  [ "$DEFAULT_SHELL" = zsh ] || continue ;;
+  esac
   ln -snfv "$DOTPATH/$f" "$HOME/$f"
 done
 
 ln -snfv "$DOTPATH/bin" "$HOME/bin"
 
 echo ""
-echo "Create simbolic links from config.d/* to ~/.config/*"
-$DOTPATH/etc/install_config.py
+echo "Create symbolic links from config.d/* to ~/.config/*"
+"$DOTPATH/etc/install_config.py"
 
-## Call private.d/etc/install
-#if [ -e $DOTPATH/private.d/etc/install ]; then
-#  echo "+++private.d"
-#  $DOTPATH/private.d/etc/install 
-#fi
-
+# Call private.d/etc/install
+# if [ -e "$DOTPATH/private.d/etc/install" ]; then
+#   echo "+++private.d"
+#   "$DOTPATH/private.d/etc/install"
+# fi
