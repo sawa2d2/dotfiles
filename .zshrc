@@ -3,6 +3,7 @@
 
 # Locale and editor
 export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
 export EDITOR=vim
 export MAGICK=convert
 
@@ -15,8 +16,8 @@ export DOTPATH="$(dirname "$(realpath "${(%):-%x}")")"
 
 # History
 HISTFILE="$HOME/.zsh_history"
-HISTSIZE=100000
-SAVEHIST=200000
+HISTSIZE=10000
+HISTFILESIZE=20000
 setopt APPEND_HISTORY
 setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_DUPS
@@ -53,3 +54,5 @@ if [[ -z ${TMUX:-} && -t 0 && -t 1 ]] &&
     tmux -u new-session
 fi
 
+source "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+source "$(brew --prefix)/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
