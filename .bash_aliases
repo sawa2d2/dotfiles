@@ -7,7 +7,6 @@ alias dl='cd ~/Downloads'
 
 # Directory operations
 alias md='mkdir -p'
-alias rd='rmdir'
 alias rm='trash-put'
 
 # Directory listing
@@ -18,7 +17,6 @@ alias la='\ls -lha'
 
 # Editors
 alias vi='nvim'
-alias ide='NVIM_APPNAME=lazyvim nvim'
 alias vimrc='$EDITOR ~/.vimrc'
 alias er='$EDITOR ~/.bashrc && source ~/.bashrc'
 alias sr='source ~/.bashrc'
