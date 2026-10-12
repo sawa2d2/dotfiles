@@ -24,8 +24,16 @@ case "$THEME_VARIANT" in
         COLOR_SELECTED='#e9b888'
         ;;
     blue)
-        COLOR_ACCENT='#579cda'
-        COLOR_SELECTED='#96bfe9'
+        COLOR_ACCENT='#1192e8'
+        COLOR_SELECTED='#75b8ed'
+        ;;
+    red)
+        COLOR_ACCENT='#da4e58'
+        COLOR_SELECTED='#ed9298'
+        ;;
+    green)
+        COLOR_ACCENT='#24a86a'
+        COLOR_SELECTED='#82cfaa'
         ;;
     *)
         printf 'Unknown theme variant: %s\n' "$THEME_VARIANT" >&2

@@ -3,13 +3,13 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <teal|violet|orange|blue>" >&2
+    echo "Usage: $0 <teal|violet|orange|blue|red|green>" >&2
     exit 2
 fi
 
 THEME_VARIANT=$1
 case "$THEME_VARIANT" in
-    teal|violet|orange|blue) ;;
+    teal|violet|orange|blue|red|green) ;;
     *) echo "Unknown theme: $THEME_VARIANT" >&2; exit 2 ;;
 esac
 
