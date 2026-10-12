@@ -3,8 +3,10 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+
 [push]
 	default = current
+
 [alias]
 	m = merge
 	sqm = merge --ff --squash
@@ -34,9 +36,23 @@
 #	fk = fork
 	gr = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
 	gra = log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+
 [merge]
 	ff = false
+
 [pull]
 	ff = only
+
 [core]
-	editor = vi
+	editor = nvim
+	pager = delta
+
+[delta]
+    side-by-side = true
+    line-numbers = true
+    navigate = true
+    syntax-theme = Dracula
+    plus-style = syntax "#276C46"
+    minus-style = syntax "#803D49"
+    plus-emph-style = syntax "#32965C"
+    minus-emph-style = syntax "#AD4659"
