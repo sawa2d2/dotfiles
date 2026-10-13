@@ -54,10 +54,6 @@ for file in "$HOME"/.zsh.d/*.zsh(N); do
     source "$file"
 done
 
-# Command completion
-autoload -Uz compinit
-compinit
-
 # User aliases
 [[ -f "$DOTPATH/.bash_aliases" ]] && source "$DOTPATH/.bash_aliases"
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
