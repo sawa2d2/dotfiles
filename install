@@ -6,6 +6,17 @@ DEFAULT_SHELL=$(basename "${SHELL:-/bin/sh}")
 
 cd "$DOTPATH"
 
+if [[ ${1:-} == --system ]]; then
+    shift
+    source "$DOTPATH/install-dotfiles-bin.sh"
+    install_system_bin "$@"
+    exit
+fi
+if (( $# != 0 )); then
+    echo "Usage: ./install | sudo ./install --system [--dry-run]" >&2
+    exit 2
+fi
+
 printf '\033[38;2;27;175;181m'
 cat <<'EOF'
      _       _    __ _ _
