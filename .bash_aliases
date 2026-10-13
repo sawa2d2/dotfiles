@@ -7,7 +7,32 @@ alias dl='cd ~/Downloads'
 
 # Directory operations
 alias md='mkdir -p'
-alias rm='trash-put'
+
+unalias rm 2>/dev/null || true
+rm() {
+    local trash_cmd=""
+
+    if command -v trash-put >/dev/null 2>&1; then
+        trash_cmd=$(command -v trash-put)
+    elif [[ $(uname -s) == Darwin ]]; then
+        for candidate in \
+            /opt/homebrew/opt/trash-cli/bin/trash-put \
+            /usr/local/opt/trash-cli/bin/trash-put
+        do
+            if [[ -x "$candidate" ]]; then
+                trash_cmd="$candidate"
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$trash_cmd" ]]; then
+        "$trash_cmd" "$@"
+    else
+        printf 'Warning: trash-put not found; falling back to permanent deletion.\n' >&2
+        command rm "$@"
+    fi
+}
 
 # Directory listing
 alias ls='ls --color=auto -FA'
@@ -18,8 +43,22 @@ alias la='\ls -lha'
 # Editors
 alias vi='nvim'
 alias vimrc='$EDITOR ~/.vimrc'
-alias er='$EDITOR ~/.bashrc && source ~/.bashrc'
-alias sr='source ~/.bashrc'
+
+_shell_rc() {
+    if [ -n "${ZSH_VERSION:-}" ]; then
+        printf '%s\n' "$HOME/.zshrc"
+    else
+        printf '%s\n' "$HOME/.bashrc"
+    fi
+}
+
+sr() {
+    . "$(_shell_rc)"
+}
+
+er() {
+    "${EDITOR:-vim}" "$(_shell_rc)" && sr
+}
 
 # Terminal and SSH
 alias less='/usr/bin/less -+F'

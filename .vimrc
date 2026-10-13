@@ -1,4 +1,7 @@
-colorscheme molokai
+" Use Molokai when installed; otherwise keep the default colorscheme
+if !empty(globpath(&runtimepath, 'colors/molokai.vim'))
+    colorscheme molokai
+endif
 
 set fenc=utf-8
 set nobackup

@@ -12,7 +12,15 @@ fi
 # Locale and editor
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
-export EDITOR=vim
+
+# Editor fallback: nvim -> vim -> vi
+if command -v nvim >/dev/null 2>&1; then
+    export EDITOR=nvim
+elif command -v vim >/dev/null 2>&1; then
+    export EDITOR=vim
+else
+    export EDITOR=vi
+fi
 export MAGICK=convert
 
 # Resolve dotfiles root
