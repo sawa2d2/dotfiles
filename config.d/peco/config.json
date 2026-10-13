@@ -1,0 +1,26 @@
+{
+  "Layout": "bottom-up",
+  "Style": {
+    "Selected": [
+      "on_#79bfc0",
+      "black"
+    ],
+    "SavedSelection": [
+      "bold",
+      "on_#79bfc0",
+      "black"
+    ],
+    "Matched": [
+      "bold",
+      "#79bfc0"
+    ],
+    "Prompt": [
+      "bold",
+      "#79bfc0"
+    ]
+  },
+  "Keymap": {
+    "C-j": "peco.SelectDown",
+    "C-k": "peco.SelectUp"
+  }
+}

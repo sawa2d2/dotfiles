@@ -1,5 +1,5 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
 DOTPATH=$(cd "$(dirname "$0")" && pwd)
 DEFAULT_SHELL=$(basename "${SHELL:-/bin/sh}")
@@ -69,6 +69,15 @@ esac
 
 # Executables
 link "$DOTPATH/bin" "$HOME/bin"
+
+# Install application configurations
+if [[ -d "$DOTPATH/config.d" ]]; then
+    while IFS= read -r -d '' src; do
+        relative="${src#"$DOTPATH/config.d/"}"
+        dst="$HOME/.config/$relative"
+        link "$src" "$dst"
+    done < <(find "$DOTPATH/config.d" -type f -print0)
+fi
 
 # Generate shared theme
 if [ -x "$DOTPATH/theme/sync" ]; then
