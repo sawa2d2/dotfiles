@@ -38,9 +38,27 @@ if [ -x "$DOTPATH/theme/sync" ]; then
   ln -snfv "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
 fi
 
+# Install Vim configuration
+echo "Install Vim configuration"
+
+VIM_COLORS="$HOME/.vim/colors"
+NVIM_MOLOKAI="$HOME/.config/nvim/colors/molokai.vim"
+VIM_MOLOKAI="$VIM_COLORS/molokai.vim"
+VIM_SURROUND="$HOME/.vim/pack/tpope/start/surround"
+mkdir -p "$VIM_COLORS"
+if [ -f "$NVIM_MOLOKAI" ]; then
+  if [ ! -e "$VIM_MOLOKAI" ]; then
+    ln -s "$NVIM_MOLOKAI" "$VIM_MOLOKAI"
+  fi
+fi
+
+if [ ! -e "$VIM_SURROUND" ]; then
+  mkdir -p "$(dirname "$VIM_SURROUND")"
+  git clone --depth 1 https://github.com/tpope/vim-surround.git "$VIM_SURROUND"
+fi
+
 echo ""
 echo "Create symbolic links from config.d/* to ~/.config/*"
-
 if [ -e "$DOTPATH/private.d/install" ]; then
   echo "+++private.d"
   "$DOTPATH/private.d/install"

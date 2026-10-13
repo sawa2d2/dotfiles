@@ -2,4 +2,5 @@
 /theme/generated/
 /.tmux.theme.conf
 /.vim.theme.vim
+/.vim/
 /private.d/

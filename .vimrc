@@ -70,3 +70,6 @@ let g:netrw_sizestyle="H"
 let g:netrw_timefmt="%Y/%m/%d(%a) %H:%M:%S"
 "
 let g:netrw_preview=1
+
+nnoremap <F2> :set invnumber invrelativenumber<CR>
+nnoremap <F3> :set invrelativenumber<CR>
