@@ -1,3 +1,16 @@
-#!/bin/bash
-# Remove ANSI color escape sequences and copy the clean text to clipboard
-cat | sed -r "s/\x1B\[[0-9;]*[mK]//g" | xsel --clipboard --input
+#!/usr/bin/env bash
+set -o pipefail
+
+# Strip ANSI color codes before copying
+case "$(uname -s)" in
+    Linux)
+        sed -E 's/\x1B\[[0-9;]*[mK]//g' | xsel --clipboard --input
+        ;;
+    Darwin)
+        sed -E 's/\x1B\[[0-9;]*[mK]//g' | /usr/bin/pbcopy
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s)" >&2
+        exit 1
+        ;;
+esac
