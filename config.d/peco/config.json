@@ -2,21 +2,21 @@
   "Layout": "bottom-up",
   "Style": {
     "Selected": [
-      "on_#79bfc0",
+      "on_#b1a5e5",
       "black"
     ],
     "SavedSelection": [
       "bold",
-      "on_#79bfc0",
+      "on_#b1a5e5",
       "black"
     ],
     "Matched": [
       "bold",
-      "#79bfc0"
+      "#b1a5e5"
     ],
     "Prompt": [
       "bold",
-      "#79bfc0"
+      "#b1a5e5"
     ]
   },
   "Keymap": {
