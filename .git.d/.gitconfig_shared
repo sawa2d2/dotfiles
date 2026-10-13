@@ -5,27 +5,36 @@
 [alias]
     m = merge
     sqm = merge --ff --squash
+    us = restore --staged
     br = branch
     bra = branch -a
     mkbr = checkout -b
     fxbr = branch -m
+    rmbr = branch -D
     st = status -sb .
     sta = status -sb -uall
     df = diff
+    dfh = diff HEAD
+    dfm = diff origin/main..HEAD
     t = tag
     a = add
-    aa = add .
+    aa = add -A
     ap = add -p
-    us = reset HEAD
     cm = commit -m
-    am = commit --amend -m
-    ph = !git push origin `git rev-parse --abbrev-ref --tags HEAD`
-    rb = rebase -i
+    fxcm = commit --amend -m
+    cncm = commit --amend -m
+    rmcm = commit --amend -m
     fe = fetch
+    ph = push -u origin HEAD
+    rb = rebase -i
     co = checkout
     sh = stash
     sha = stash -u
     shp = stash pop
+    rs = reset
+    sb = show-branch
+    sba = show-branch --all
+    wt = worktree
     se = browse
     pr = pull-request
     fk = fork
@@ -36,7 +45,7 @@
     default = current
 
 [merge]
-    ff = false
+    conflictStyle = zdiff3
 
 [pull]
     ff = only
@@ -51,8 +60,15 @@
     plus-emph-style = syntax "#32965C"
     minus-emph-style = syntax "#AD4659"
 
+[interactive]
+    diffFilter = delta --color-only
+
 [filter "lfs"]
     clean = git-lfs clean -- %f
     smudge = git-lfs smudge -- %f
     process = git-lfs filter-process
     required = true
+
+[credential "https://github.com"]
+    helper =
+    helper = !gh auth git-credential
