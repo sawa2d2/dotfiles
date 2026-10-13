@@ -1,14 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-url_base=$(git config --get remote.origin.url | sed -e 's/\:/\//' -e 's/git\@\(.*\)\.git/https:\/\/\1/g')
-echo $url_base
-current_branch=$(git branch | grep "*" | cut -b 3-)
+branch=$(git symbolic-ref --quiet --short HEAD) || {
+    echo "Not on a branch." >&2
+    exit 1
+}
 
-git remote show origin | grep "\ *$current_branch\ *tracked$" | sed -e 's/.*:\ *\(.*\)/\1/g' > /dev/null 2>&1
-does_exist_in_remote=$?
-if [[ does_exist_in_remote -eq 0 ]]; then
-  open $url_base/tree/$current_branch
-  exit 0
+# Check whether the branch exists on origin.
+if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null; then
+    echo "Remote branch not found: $branch" >&2
+    exit 1
 fi
-echo "Remote branch not found named \"$current_branch\""
-exit 1
+
+# Get URL without launching the browser.
+url=$(gh browse --branch "$branch" --no-browser)
+
+# Open browser without forwarding its output to the terminal.
+case "$(uname -s)" in
+    Linux)
+        nohup xdg-open "$url" >/dev/null 2>&1 </dev/null &
+        ;;
+    Darwin)
+        open "$url" >/dev/null 2>&1
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s)" >&2
+        exit 1
+        ;;
+esac
