@@ -10,7 +10,7 @@
 ## Usage
 
 ```bash
-./theme/sync teal && tmux source-file ~/.tmux.conf
+./theme/sync teal
 ```
 
 ## Allowed options

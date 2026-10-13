@@ -5,10 +5,15 @@
 autoload -Uz add-zsh-hook
 
 # Git status colors (shared palette).
-_PROMPT_GIT_CLEAN='#55c9a6'
-_PROMPT_GIT_DIRTY='#e5a45b'
-_PROMPT_GIT_STAGED='#70aee0'
-_PROMPT_GIT_MIXED='#e27983'
+# Load generated Git colors
+if [[ -f "$DOTPATH/theme/generated/zsh-prompt.zsh" ]]; then
+    source "$DOTPATH/theme/generated/zsh-prompt.zsh"
+else
+    _PROMPT_GIT_CLEAN='#55c9a6'
+    _PROMPT_GIT_DIRTY='#e5a45b'
+    _PROMPT_GIT_STAGED='#70aee0'
+    _PROMPT_GIT_MIXED='#e27983'
+fi
 
 # Abbreviate the working directory to its last two components.
 _prompt_path() {
