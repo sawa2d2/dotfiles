@@ -62,9 +62,6 @@ compinit
 [[ -f "$DOTPATH/.bash_aliases" ]] && source "$DOTPATH/.bash_aliases"
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
 
-# Prompt
-PROMPT='%2~$ '
-
 # Homebrew Zsh plugins
 if command -v brew >/dev/null 2>&1; then
     BREW_PREFIX=$(brew --prefix)
