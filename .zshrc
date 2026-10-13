@@ -47,7 +47,7 @@ if [[ -x /usr/bin/dircolors ]]; then
     fi
 fi
 
-[[ -t 0 ]] && stty werase undef
+[[ -t 0 ]] && command -v stty >/dev/null 2>&1 && stty werase undef
 
 # Zsh extensions and widgets
 for file in "$HOME"/.zsh.d/*.zsh(N); do

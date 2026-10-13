@@ -1,6 +1,10 @@
 # Prioritize commands from the developer checkout over system-installed copies.
 path_prepend() {
     [[ -d "$1" ]] || return 0
+    if [[ -n ${ZSH_VERSION:-} ]]; then
+        path=("$1" "${(@)path:#$1}")
+        return 0
+    fi
     local item
     local -a parts kept=()
     IFS=: read -r -a parts <<< "$PATH"
@@ -21,7 +25,9 @@ configure_developer_path() {
     for dir in "$DOTPATH"/bin/*/; do
         [[ -d "$dir" ]] && dirs+=("${dir%/}")
     done
-    for (( i=${#dirs[@]}-1; i>=0; i-- )); do
+    local offset=0
+    [[ -n ${ZSH_VERSION:-} ]] && offset=1
+    for (( i=${#dirs[@]}-1+offset; i>=offset; i-- )); do
         path_prepend "${dirs[i]}"
     done
 }
