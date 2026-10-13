@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COUNT="${1:-10}"
+
+[[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || {
+    echo "Usage: $0 [positive-integer]" >&2
+    exit 2
+}
+
+for ((i = 1; i <= COUNT; i++)); do
+    { /usr/bin/time -f '%e' bash -ic 'exit 0' 2>&1 || true; } |
+        awk '/^[0-9]+\.[0-9]+$/ { print $1 * 1000 }'
+done | awk '
+{
+    sum += $1
+    if (NR == 1 || $1 < min) min = $1
+    if ($1 > max) max = $1
+}
+END {
+    if (NR == 0) exit 1
+    printf "Runs:    %d\n", NR
+    printf "Average: %.1f ms\n", sum / NR
+    printf "Min:     %.1f ms\n", min
+    printf "Max:     %.1f ms\n", max
+}'
