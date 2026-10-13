@@ -2,64 +2,109 @@
 set -eu
 
 DOTPATH=$(cd "$(dirname "$0")" && pwd)
-cd "$DOTPATH" || exit 1
+DEFAULT_SHELL=$(basename "${SHELL:-/bin/sh}")
+
+cd "$DOTPATH"
 
 printf '\033[38;2;27;175;181m'
-cat <<EOF
+cat <<'EOF'
      _       _    __ _ _
   __| | ___ | |_ / _(_) | ___  ___
- / _\` |/ _ \| __| |_| | |/ _ \/ __|
-| (_| | (_) | |_|  _| | |  __/\__ \\
+ / _` |/ _ \| __| |_| | |/ _ \/ __|
+| (_| | (_) | |_|  _| | |  __/\__ \
  \__,_|\___/ \__|_| |_|_|\___||___/
 
 EOF
 printf '\033[0m'
 
-DEFAULT_SHELL=$(basename "$(getent passwd "$(id -un)" | cut -d: -f7)")
+# Create or update symlinks, but preserve real files/directories.
+link() {
+    src=$1
+    dest=$2
 
-for f in .??*
+    [ -e "$src" ] || [ -L "$src" ] || return 0
+
+    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
+        echo "Skip existing: $dest"
+        return 0
+    fi
+
+    ln -sfn "$src" "$dest"
+    echo "Link: $dest"
+}
+
+# Shared configurations
+for f in \
+    .gitconfig \
+    .git.d \
+    .profile_common \
+    .tmux.conf \
+    .vimrc
 do
-  case "$f" in
-    .git|.gitignore|.config|.DS_Store) continue ;;
-    .bashrc) [ "$DEFAULT_SHELL" = bash ] || continue ;;
-    .zshrc)  [ "$DEFAULT_SHELL" = zsh ] || continue ;;
-  esac
-  ln -snfv "$DOTPATH/$f" "$HOME/$f"
+    link "$DOTPATH/$f" "$HOME/$f"
 done
 
-ln -snfv "$DOTPATH/bin" "$HOME/bin"
+# Shell-specific configurations
+case "$DEFAULT_SHELL" in
+    bash)
+        for f in \
+            .bashrc \
+            .bash_aliases \
+            .bash.d \
+            .blerc \
+            .inputrc
+        do
+            link "$DOTPATH/$f" "$HOME/$f"
+        done
+        ;;
+    zsh)
+        for f in \
+            .zshrc \
+            .zsh.d
+        do
+            link "$DOTPATH/$f" "$HOME/$f"
+        done
+        ;;
+esac
 
-# Generate and install shared theme
+# Executables
+link "$DOTPATH/bin" "$HOME/bin"
+
+# Generate shared theme
 if [ -x "$DOTPATH/theme/sync" ]; then
-  echo "Generate theme configurations"
-  "$DOTPATH/theme/sync" teal
+    echo "Generate theme configurations"
+    "$DOTPATH/theme/sync" teal
 
-  ln -snfv "$DOTPATH/.tmux.theme.conf" "$HOME/.tmux.theme.conf"
-  ln -snfv "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
+    link "$DOTPATH/.tmux.theme.conf" "$HOME/.tmux.theme.conf"
+    link "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
 fi
 
-# Install Vim configuration
+# Private configuration must be installed before Vim setup
+if [ -f "$DOTPATH/private.d/install" ]; then
+    echo "Install private configuration"
+    "$DOTPATH/private.d/install"
+fi
+
+# Vim configuration
 echo "Install Vim configuration"
 
 VIM_COLORS="$HOME/.vim/colors"
 NVIM_MOLOKAI="$HOME/.config/nvim/colors/molokai.vim"
 VIM_MOLOKAI="$VIM_COLORS/molokai.vim"
 VIM_SURROUND="$HOME/.vim/pack/tpope/start/surround"
-mkdir -p "$VIM_COLORS"
+
 if [ -f "$NVIM_MOLOKAI" ]; then
-  if [ ! -e "$VIM_MOLOKAI" ]; then
-    ln -s "$NVIM_MOLOKAI" "$VIM_MOLOKAI"
-  fi
+    mkdir -p "$VIM_COLORS"
+    link "$NVIM_MOLOKAI" "$VIM_MOLOKAI"
 fi
 
 if [ ! -e "$VIM_SURROUND" ]; then
-  mkdir -p "$(dirname "$VIM_SURROUND")"
-  git clone --depth 1 https://github.com/tpope/vim-surround.git "$VIM_SURROUND"
-fi
-
-echo ""
-echo "Create symbolic links from config.d/* to ~/.config/*"
-if [ -e "$DOTPATH/private.d/install" ]; then
-  echo "+++private.d"
-  "$DOTPATH/private.d/install"
+    if [ -L "$VIM_SURROUND" ]; then
+        echo "Skip dangling symlink: $VIM_SURROUND"
+    else
+        mkdir -p "$(dirname "$VIM_SURROUND")"
+        git clone --depth 1 \
+            https://github.com/tpope/vim-surround.git \
+            "$VIM_SURROUND"
+    fi
 fi
