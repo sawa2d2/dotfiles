@@ -1,0 +1,2 @@
+#!/bin/bash
+shfmt -i 2 -ci -sr -w "$@"
