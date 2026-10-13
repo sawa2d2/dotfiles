@@ -6,10 +6,6 @@ path_add() {
 
 [[ -n ${DOTPATH:-} ]] && path_add "$DOTPATH/bin"
 [[ -n ${DOTPATH:-} ]] && path_add "$DOTPATH/private.d/bin"
-path_add /usr/local/go/bin
-[[ -n ${GOPATH:-} ]] && path_add "$GOPATH/bin"
-[[ -n ${ANDROID_STUDIO:-} ]] && path_add "$ANDROID_STUDIO/bin"
-path_add "${KREW_ROOT:-$HOME/.krew}/bin"
 
 if [[ -n ${DOTPATH:-} ]]; then
     for dir in "$DOTPATH"/bin/*/; do
