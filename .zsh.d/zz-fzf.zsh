@@ -15,11 +15,11 @@ zle -N fzf-history
 bindkey '^R' fzf-history
 
 
-fbr() {
+gbr() {
     local branch
     if [[ ${1:-} == -b ]]; then
       if (($# != 2)) || [[ -z $2 ]]; then
-        echo 'Usage: fbr -b <new-branch>' >&2
+        echo 'Usage: gbr -b <new-branch>' >&2
         return 2
       fi
       git switch -c "$2"
@@ -41,7 +41,7 @@ fbr() {
     elif (($# == 1)) && [[ -n $1 && $1 != -* ]]; then
       branch=$1
     else
-      echo 'Usage: fbr [branch] | fbr -b <new-branch> | fbr -d|-D [branch]' >&2
+      echo 'Usage: gbr [branch] | fbr -b <new-branch> | fbr -d|-D [branch]' >&2
       return 2
     fi
     if git show-ref --verify --quiet "refs/remotes/$branch"; then
