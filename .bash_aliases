@@ -5,6 +5,18 @@ alias ...='cd ../..'
 alias de='cd ~/Desktop'
 alias dl='cd ~/Downloads'
 
+# Change to the directory containing an executable resolved by which-basedir.
+cwhich() {
+  if (( $# != 1 )); then
+    printf 'Usage: cwhich <command>\n' >&2
+    return 2
+  fi
+
+  local target
+  target=$("$DOTPATH/which-basedir" "$1") || return
+  cd -- "$target"
+}
+
 # Directory operations
 alias md='mkdir -p'
 

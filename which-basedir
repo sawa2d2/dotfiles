@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $(basename "$0") <command>" >&2
+  exit 2
+fi
+
+path=$(command -v "$1") || exit 1
+
+if [[ ! -f "$path" ]]; then
+  echo "which_basedir: not an executable file: $1" >&2
+  exit 1
+fi
+
+dirname -- "$path"
