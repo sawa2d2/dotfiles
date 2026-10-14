@@ -3,8 +3,8 @@
 BRANCH=$1
 
 if [ "$#" -eq 0 ]; then
-  current_branch=$(git rev-parse --abbrev-ref HEAD)
-  BRANCH=${current_branch}
+	current_branch=$(git rev-parse --abbrev-ref HEAD)
+	BRANCH=${current_branch}
 fi
 
 GIT_PROJECT_ROOT=$(git rev-parse --show-toplevel)

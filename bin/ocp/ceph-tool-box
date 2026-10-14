@@ -1,10 +1,10 @@
 #!/bin/bash
 function login_toolbox() {
-    oc -n openshift-storage rsh $(oc get pods -n openshift-storage -o custom-columns="NAME:.metadata.name" | grep rook-ceph-tools) 
+	oc -n openshift-storage rsh $(oc get pods -n openshift-storage -o custom-columns="NAME:.metadata.name" | grep rook-ceph-tools)
 }
 
 function enable_toolbox() {
-    echo ""
+	echo ""
 }
 
 login_toolbox

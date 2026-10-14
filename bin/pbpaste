@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 case "$(uname -s)" in
-    Linux)
-        exec xsel --clipboard --output "$@"
-        ;;
-    Darwin)
-        exec /usr/bin/pbpaste "$@"
-        ;;
-    *)
-        echo "Unsupported OS: $(uname -s)" >&2
-        exit 1
-        ;;
+Linux)
+	exec xsel --clipboard --output "$@"
+	;;
+Darwin)
+	exec /usr/bin/pbpaste "$@"
+	;;
+*)
+	echo "Unsupported OS: $(uname -s)" >&2
+	exit 1
+	;;
 esac

@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
 for key in \
-    ~/.ssh/id_ed25519.pub \
-    ~/.ssh/id_ecdsa.pub \
-    ~/.ssh/id_rsa.pub
-do
-    if [[ -f "$key" ]]; then
-        pbcopy < "$key"
-        exit 0
-    fi
+	~/.ssh/id_ed25519.pub \
+	~/.ssh/id_ecdsa.pub \
+	~/.ssh/id_rsa.pub; do
+	if [[ -f "$key" ]]; then
+		pbcopy <"$key"
+		exit 0
+	fi
 done
 
 echo "No default SSH public key found" >&2

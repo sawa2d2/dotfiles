@@ -3,14 +3,14 @@ set -o pipefail
 
 # Strip ANSI color codes before copying
 case "$(uname -s)" in
-    Linux)
-        sed -E 's/\x1B\[[0-9;]*[mK]//g' | xsel --clipboard --input
-        ;;
-    Darwin)
-        sed -E 's/\x1B\[[0-9;]*[mK]//g' | /usr/bin/pbcopy
-        ;;
-    *)
-        echo "Unsupported OS: $(uname -s)" >&2
-        exit 1
-        ;;
+Linux)
+	sed -E 's/\x1B\[[0-9;]*[mK]//g' | xsel --clipboard --input
+	;;
+Darwin)
+	sed -E 's/\x1B\[[0-9;]*[mK]//g' | /usr/bin/pbcopy
+	;;
+*)
+	echo "Unsupported OS: $(uname -s)" >&2
+	exit 1
+	;;
 esac

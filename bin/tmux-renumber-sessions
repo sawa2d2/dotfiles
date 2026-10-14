@@ -2,18 +2,18 @@
 set -euo pipefail
 
 mapfile -t sessions < <(
-    tmux list-sessions -F '#{session_id} #{session_name}' |
-    awk '$2 ~ /^[0-9]+$/ { print }' |
-    sort -k2,2n |
-    cut -d' ' -f1
+	tmux list-sessions -F '#{session_id} #{session_name}' |
+		awk '$2 ~ /^[0-9]+$/ { print }' |
+		sort -k2,2n |
+		cut -d' ' -f1
 )
 
 # Rename to temporary names to avoid collisions.
 for i in "${!sessions[@]}"; do
-    tmux rename-session -t "${sessions[i]}" "__renumber_${$}_$i"
+	tmux rename-session -t "${sessions[i]}" "__renumber_${$}_$i"
 done
 
 # Assign sequential names starting at 0.
 for i in "${!sessions[@]}"; do
-    tmux rename-session -t "${sessions[i]}" "$i"
+	tmux rename-session -t "${sessions[i]}" "$i"
 done

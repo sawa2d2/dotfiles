@@ -1,4 +1,3 @@
 #!/bin/bash
 
 oc run debug --image=quay.io/centos/centos:stream9 --restart=Never -- sleep infinity
-
