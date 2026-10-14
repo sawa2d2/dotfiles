@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 1)); then
+  echo 'Usage: gwt-path <branch>' >&2
+  exit 2
+fi
+
+branch=$1
+git rev-parse --is-inside-work-tree >/dev/null
+common_dir=$(git rev-parse --path-format=absolute --git-common-dir)
+repo_name=$(basename "$(dirname "$common_dir")")
+repo_id=$(printf '%s' "$common_dir" | git hash-object --stdin | cut -c1-10)
+
+# The primary worktree is reserved for main; do not create a second main worktree.
+primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+primary_branch=$(git -C "$primary" symbolic-ref --quiet --short HEAD || true)
+if [[ $primary_branch != main ]]; then
+  echo "gwt requires the primary worktree ($primary) to be on main (currently: ${primary_branch:-detached HEAD})." >&2
+  echo "Switch the primary worktree to main before using gwt." >&2
+  exit 1
+fi
+
+if git show-ref --verify --quiet "refs/remotes/$branch"; then
+  local_branch=${branch#*/}
+  if [[ $local_branch == HEAD ]]; then
+    echo 'Select a branch, not remote HEAD.' >&2
+    exit 1
+  fi
+else
+  local_branch=$branch
+fi
+
+if ! git show-ref --verify --quiet "refs/heads/$local_branch" &&
+   ! git show-ref --verify --quiet "refs/remotes/$branch"; then
+  echo "Branch not found: $branch" >&2
+  exit 1
+fi
+
+existing=$(git worktree list --porcelain | awk -v ref="refs/heads/$local_branch" '
+  /^worktree / { path = substr($0, 10) }
+  /^branch / && substr($0, 8) == ref { print path; exit }
+')
+if [[ -n $existing ]]; then
+  printf '%s\n' "$existing"
+  exit 0
+fi
+
+branch_id=$(printf '%s' "$local_branch" | git hash-object --stdin | cut -c1-8)
+safe_name=${local_branch//\//-}
+target="$HOME/worktrees/${repo_name}-${repo_id}/${safe_name}-${branch_id}"
+mkdir -p "$(dirname "$target")"
+if git show-ref --verify --quiet "refs/heads/$local_branch"; then
+  git worktree add "$target" "$local_branch" >&2
+else
+  git worktree add --track -b "$local_branch" "$target" "$branch" >&2
+fi
+printf '%s\n' "$target"

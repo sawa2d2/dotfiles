@@ -31,6 +31,22 @@ fbr() {
     fi
 }
 
+gwt() {
+  local branch path
+  if (($# > 1)); then
+    echo 'Usage: gwt [branch]' >&2
+    return 2
+  fi
+  if (($# == 1)); then
+    branch=$1
+  else
+    branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
+    [[ -n $branch ]] || return
+  fi
+  path=$(gwt-path "$branch") || return
+  cd -- "$path"
+}
+
 # Load fzf-git shortcuts after the other interactive key bindings.
 fzf_git_script="$HOME/.local/opt/fzf-git.sh/fzf-git.sh"
 if [[ -f "$fzf_git_script" ]]; then

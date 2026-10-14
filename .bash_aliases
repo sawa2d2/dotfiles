@@ -66,3 +66,14 @@ alias sshconf='vi ~/.ssh/config'
 # Development tools
 alias qiita='npx qiita'
 alias grep='grep --color=auto'
+
+# Return to the primary worktree after gfinish removes the active feature worktree.
+gfinish() {
+  local current primary
+  current=$(git rev-parse --show-toplevel) || return
+  primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p') || return
+  command gfinish "$@" || return
+  if [[ ! -d $current ]]; then
+    cd -- "$primary"
+  fi
+}

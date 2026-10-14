@@ -29,6 +29,53 @@ if git diff --quiet main "$feature"; then
 	exit 1
 fi
 
+# When running inside an additional worktree, integrate through the primary main worktree.
+primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+current=$(git rev-parse --show-toplevel)
+if [[ $current != "$primary" ]]; then
+  if [[ $(git -C "$primary" symbolic-ref --quiet --short HEAD || true) != main ]]; then
+    echo "The primary worktree must be on main: $primary" >&2
+    exit 1
+  fi
+  if [[ -n $(git -C "$primary" status --porcelain) ]]; then
+    echo "The primary main worktree must be clean: $primary" >&2
+    exit 1
+  fi
+
+  echo "Squash $feature into main, push, and remove its worktree."
+  git diff --stat main "$feature"
+  read -r -p "Continue? [y/N] " answer
+  [[ $answer == [yY] ]] || exit 0
+
+  # A detached temporary worktree keeps main unchanged until the squash commit succeeds.
+  temporary=$(mktemp -d)
+  rmdir "$temporary"
+  git worktree add --detach "$temporary" main
+  if ! git -C "$temporary" merge --squash "$feature"; then
+    echo "Squash failed in $temporary. Resolve or remove that worktree manually." >&2
+    exit 1
+  fi
+  git -C "$temporary" commit
+  result=$(git -C "$temporary" rev-parse HEAD)
+  git -C "$primary" merge --ff-only "$result"
+  git push origin main
+  git worktree remove "$temporary"
+
+  # Move the helper process away before deleting its current worktree.
+  cd -- "$primary"
+  # Do not force-remove: if the feature worktree acquired changes, preserve them.
+  git worktree remove "$current"
+  git branch -D "$feature"
+  if git ls-remote --exit-code --heads origin "$feature" >/dev/null 2>&1; then
+    read -r -p "Delete remote branch origin/$feature? [y/N] " answer
+    if [[ $answer == [yY] ]]; then
+      git push origin --delete "$feature"
+    fi
+  fi
+  echo "Finished: $feature -> main"
+  exit 0
+fi
+
 echo "Squash $feature into main, then push and remove the local branch."
 git diff --stat main "$feature"
 read -r -p "Continue? [y/N] " answer
