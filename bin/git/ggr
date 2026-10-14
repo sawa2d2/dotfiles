@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# > 1)) || { (($# == 1)) && [[ $1 != --all ]]; }; then
+  echo 'Usage: ggr [--all]' >&2
+  exit 2
+fi
+
+args=()
+if (($#)); then args+=(--all); fi
+selected=$(git log --graph "${args[@]}" --oneline --color=always |
+  fzf --ansi --no-sort --reverse) || exit $?
+
+hash=$(printf '%s\n' "$selected" | grep -oE '[0-9a-f]{7,40}' | head -n 1) || exit 1
+[[ -n $hash ]] || exit 1
+printf '%s\n' "$hash"
