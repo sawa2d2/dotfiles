@@ -1,4 +1,3 @@
 #!/bin/bash
-# Usage:
-#   $ kesh <container-name>
-oc exec -it $@ -- /bin/sh
+# Usage: kesh <container-name> [oc exec options]
+exec oc exec -it "$@" -- /bin/sh

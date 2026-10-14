@@ -2,10 +2,11 @@
 set -ueC
 
 SHARED_DIR="${SHARED_DIR:-/mnt/ext/shared}"
+MOUNT_TAG="${MOUNT_TAG:-shared}"
 
 usage() {
   echo "Usage: $0 <domain1> [domain2 ...]"
-  echo "Optional: SHARED_DIR=/path/to/shared $0 <domain1> [domain2 ...]"
+  echo "Optional: SHARED_DIR=/path/to/shared MOUNT_TAG=shared $0 <domain1> [domain2 ...]"
 }
 
 if [ $# -eq 0 ]; then
@@ -18,7 +19,7 @@ for domain in "$@"; do
 <filesystem type="mount" accessmode="passthrough">
   <driver type="virtiofs" queue="1024"/>
   <source dir="${SHARED_DIR}"/>
-  <target dir="/mnt/shared"/>
+  <target dir="${MOUNT_TAG}"/>
 </filesystem>
 EOF
 done

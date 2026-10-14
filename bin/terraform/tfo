@@ -1,2 +1,2 @@
 #!/bin/bash
-tf output $@
+exec tf output "$@"
