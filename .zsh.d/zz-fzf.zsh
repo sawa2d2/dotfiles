@@ -17,6 +17,14 @@ bindkey '^R' fzf-history
 
 fbr() {
     local branch
+    if [[ ${1:-} == -b ]]; then
+      if (($# != 2)) || [[ -z $2 ]]; then
+        echo 'Usage: fbr -b <new-branch>' >&2
+        return 2
+      fi
+      git switch -c "$2"
+      return
+    fi
     if [[ ${1:-} == -d || ${1:-} == -D ]] && (($# <= 2)); then
       if (($# == 2)); then
         branch=$2
@@ -27,12 +35,15 @@ fbr() {
       git branch "$1" -- "$branch"
       return
     fi
-    if (($# != 0)); then
-      echo 'Usage: fbr [-d|-D [branch]]' >&2
+    if (($# == 0)); then
+      branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
+      [[ -n $branch ]] || return
+    elif (($# == 1)) && [[ -n $1 && $1 != -* ]]; then
+      branch=$1
+    else
+      echo 'Usage: fbr [branch] | fbr -b <new-branch> | fbr -d|-D [branch]' >&2
       return 2
     fi
-    branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
-    [[ -n $branch ]] || return
     if git show-ref --verify --quiet "refs/remotes/$branch"; then
       local local_branch=${branch#*/}
       if git show-ref --verify --quiet "refs/heads/$local_branch"; then
