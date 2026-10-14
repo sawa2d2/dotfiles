@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mapfile -t sessions < <(
+sessions=()
+while IFS= read -r session; do
+	sessions+=("$session")
+done < <(
 	tmux list-sessions -F '#{session_id} #{session_name}' |
 		awk '$2 ~ /^[0-9]+$/ { print }' |
 		sort -k2,2n |
