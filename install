@@ -46,6 +46,7 @@ link() {
 
 # Shared configurations
 for f in \
+    .editorconfig \
     .gitconfig \
     .git.d \
     .profile_common \
@@ -86,6 +87,7 @@ if [[ -d "$DOTPATH/config.d" ]]; then
     while IFS= read -r -d '' src; do
         relative="${src#"$DOTPATH/config.d/"}"
         dst="$HOME/.config/$relative"
+        mkdir -p "$(dirname "$dst")"
         link "$src" "$dst"
     done < <(find "$DOTPATH/config.d" -type f -print0)
 fi

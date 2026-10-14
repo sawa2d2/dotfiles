@@ -1,0 +1,5 @@
+# User-wide Ruff defaults. Project-local configuration takes precedence.
+[lint]
+select = ["E", "F", "I", "A", "B", "UP", "C4", "PLE", "PIE"]
+ignore = ["E501"]
+fixable = ["ALL"]
