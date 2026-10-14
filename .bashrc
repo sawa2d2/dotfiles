@@ -5,8 +5,10 @@ case $- in
 esac
 
 # Initialize ble.sh (without attaching yet)
-if [[ -f "$HOME/.local/share/blesh/ble.sh" ]]; then
-	source "$HOME/.local/share/blesh/ble.sh" --attach=none
+if command -v blesh-share >/dev/null 2>&1; then
+    source "$(blesh-share)/ble.sh" --attach=none
+elif [[ -f "$HOME/.local/share/blesh/ble.sh" ]]; then
+    source "$HOME/.local/share/blesh/ble.sh" --attach=none
 fi
 
 # Locale and editor

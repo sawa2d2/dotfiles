@@ -27,6 +27,9 @@ export DOTPATH="$(dirname "$(realpath "${(%):-%x}")")"
 [[ -f "$DOTPATH/.bash.d/path.bash" ]] &&
     source "$DOTPATH/.bash.d/path.bash"
 
+# Allow comments in interactive commands (including pasted snippets).
+setopt INTERACTIVE_COMMENTS
+
 # History
 HISTFILE="$HOME/.zsh_history"
 HISTSIZE=10000
@@ -58,17 +61,17 @@ done
 [[ -f "$DOTPATH/.bash_aliases" ]] && source "$DOTPATH/.bash_aliases"
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
 
-# Homebrew Zsh plugins
-if command -v brew >/dev/null 2>&1; then
-    BREW_PREFIX=$(brew --prefix)
-
-    for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
-        plugin_file="$BREW_PREFIX/share/$plugin/$plugin.zsh"
+# Prefer Nix-managed Zsh plugins, with Homebrew as a fallback.
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+    plugin_file="$HOME/.local/share/zsh/plugins/$plugin/$plugin.zsh"
+    if [[ -f "$plugin_file" ]]; then
+        source "$plugin_file"
+    elif (( $+commands[brew] )); then
+        plugin_file="$(brew --prefix)/share/$plugin/$plugin.zsh"
         [[ -f "$plugin_file" ]] && source "$plugin_file"
-    done
-
-    unset BREW_PREFIX plugin plugin_file
-fi
+    fi
+done
+unset plugin plugin_file
 
 # Start tmux on an interactive terminal, unless already inside tmux
 if [[ -z ${TMUX:-} && -t 0 && -t 1 ]] &&

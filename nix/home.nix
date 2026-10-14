@@ -1,0 +1,40 @@
+{ pkgs, fzf-git, molokai, ... }:
+
+{
+  home.stateVersion = "26.05";
+
+  # CLI packages only; existing dotfiles remain unmanaged by Home Manager.
+  home.packages = with pkgs; [
+    fzf
+    delta
+    zoxide
+    tmux
+    neovim
+    ripgrep
+    jq
+    git
+    gh
+    tree
+    shellcheck
+    shfmt
+    gnumake
+  ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+    blesh
+  ];
+
+  # Zsh plugins, sourced from stable Home Manager-managed paths.
+  home.file.".local/share/zsh/plugins/zsh-autosuggestions".source = "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions";
+  home.file.".local/share/zsh/plugins/zsh-syntax-highlighting".source = "${pkgs.zsh-syntax-highlighting}/share/zsh-syntax-highlighting";
+
+  # Vim's native package layout; do not replace the existing Vim configuration.
+  home.file.".vim/pack/tpope/start/surround".source = pkgs.vimPlugins.vim-surround;
+
+  # Share exactly the same Molokai theme between Vim and Neovim.
+  home.file.".vim/colors/molokai.vim".source = "${molokai}/colors/molokai.vim";
+  home.file.".config/nvim/colors/molokai.vim".source = "${molokai}/colors/molokai.vim";
+
+  # Keep the path sourced by both Bash and Zsh unchanged.
+  home.file.".local/opt/fzf-git.sh".source = fzf-git;
+
+  programs.home-manager.enable = true;
+}

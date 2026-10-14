@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+nix_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+
+if ! command -v nix >/dev/null 2>&1; then
+    echo "Error: Nix is not installed or not in PATH." >&2
+    exit 1
+fi
+
+# Machine-specific settings remain outside version control.
+if [[ -f "$nix_dir/local.env" ]]; then
+    set -a
+    source "$nix_dir/local.env"
+    set +a
+fi
+
+if [[ -z ${HOME_MANAGER_USER:-} || -z ${HOME_MANAGER_HOME:-} ]]; then
+    echo "Error: HOME_MANAGER_USER and HOME_MANAGER_HOME must be set." >&2
+    echo "Set them in nix/local.env (ignored by Git), or export them before running." >&2
+    exit 1
+fi
+
+if [[ "$HOME_MANAGER_HOME" != /* ]]; then
+    echo "Error: HOME_MANAGER_HOME must be an absolute path." >&2
+    exit 1
+fi
+
+case "$(uname -s):$(uname -m)" in
+    Linux:x86_64) configuration=ubuntu ;;
+    Darwin:arm64) configuration=macos ;;
+    *)
+        echo "Error: unsupported host $(uname -s)/$(uname -m)." >&2
+        exit 1
+        ;;
+esac
+
+generation=$(nix build --impure --no-link --print-out-paths \
+    "$nix_dir#homeConfigurations.$configuration.activationPackage")
+exec "$generation/activate"

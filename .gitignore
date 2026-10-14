@@ -4,3 +4,4 @@
 /.vim.theme.vim
 /.vim/
 /private.d/
+/nix/local.env

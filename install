@@ -101,32 +101,9 @@ if [ -x "$DOTPATH/theme/sync" ]; then
     link "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
 fi
 
-# Private configuration must be installed before Vim setup
+# Private configuration
 if [ -f "$DOTPATH/private.d/install" ]; then
     echo "Install private configuration"
     "$DOTPATH/private.d/install"
 fi
 
-# Vim configuration
-echo "Install Vim configuration"
-
-VIM_COLORS="$HOME/.vim/colors"
-NVIM_MOLOKAI="$HOME/.config/nvim/colors/molokai.vim"
-VIM_MOLOKAI="$VIM_COLORS/molokai.vim"
-VIM_SURROUND="$HOME/.vim/pack/tpope/start/surround"
-
-if [ -f "$NVIM_MOLOKAI" ]; then
-    mkdir -p "$VIM_COLORS"
-    link "$NVIM_MOLOKAI" "$VIM_MOLOKAI"
-fi
-
-if [ ! -e "$VIM_SURROUND" ]; then
-    if [ -L "$VIM_SURROUND" ]; then
-        echo "Skip dangling symlink: $VIM_SURROUND"
-    else
-        mkdir -p "$(dirname "$VIM_SURROUND")"
-        git clone --depth 1 \
-            https://github.com/tpope/vim-surround.git \
-            "$VIM_SURROUND"
-    fi
-fi
