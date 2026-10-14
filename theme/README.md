@@ -5,7 +5,7 @@
 - `.tmux.conf`
 - `.bash.d/prompt.bash`
 - `.vimrc`
-- `private.d/config.d/peco/config.json`
+- `theme/generated/fzf.sh`
 
 ## Usage
 

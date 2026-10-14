@@ -1,4 +1,4 @@
-# Loaded after peco.bash; keep peco functions for fallback.
+# fzf widgets for interactive Bash.
 command -v fzf >/dev/null 2>&1 || return 0
 [[ -f "$DOTPATH/theme/generated/fzf.sh" ]] && source "$DOTPATH/theme/generated/fzf.sh"
 
@@ -48,7 +48,7 @@ fzf_kill() {
     kill "$pid"
 }
 
-# Match existing peco shortcuts. peco functions remain available by name.
+# Interactive key bindings.
 if [[ -n ${BLE_VERSION:-} ]]; then
     ble-bind -x 'C-r' fzf_search_history
     ble-bind -x 'C-]' fzf_change_directory
@@ -64,7 +64,16 @@ fbr() {
     local branch
     branch=$(_fzf_git_branches) || return
     [[ -n $branch ]] || return
-    git switch "$branch"
+    if git show-ref --verify --quiet "refs/remotes/$branch"; then
+        local local_branch=${branch#*/}
+        if git show-ref --verify --quiet "refs/heads/$local_branch"; then
+            git switch "$local_branch"
+        else
+            git switch --track "$branch"
+        fi
+    else
+        git switch "$branch"
+    fi
 }
 
 # Load fzf-git shortcuts after the other interactive key bindings.
