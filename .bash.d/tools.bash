@@ -9,13 +9,13 @@ export NVM_DIR="$HOME/.nvm"
 eval "$(zoxide init bash --cmd cd)"
 
 function ide() {
-    [[ -n ${TMUX:-} ]] || {
-        echo "Not inside tmux" >&2
-        return 1
-    }
+  [[ -n ${TMUX:-} ]] || {
+    echo "Not inside tmux" >&2
+    return 1
+  }
 
-    tmux split-window -v -p 30
-    tmux split-window -h -p 40
-    tmux select-pane -L
-    tmux select-pane -U
+  tmux split-window -v -p 30
+  tmux split-window -h -p 40
+  tmux select-pane -L
+  tmux select-pane -U
 }

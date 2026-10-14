@@ -10,28 +10,27 @@ alias md='mkdir -p'
 
 unalias rm 2>/dev/null || true
 rm() {
-    local trash_cmd=""
+	local trash_cmd=""
 
-    if command -v trash-put >/dev/null 2>&1; then
-        trash_cmd=$(command -v trash-put)
-    elif [[ $(uname -s) == Darwin ]]; then
-        for candidate in \
-            /opt/homebrew/opt/trash-cli/bin/trash-put \
-            /usr/local/opt/trash-cli/bin/trash-put
-        do
-            if [[ -x "$candidate" ]]; then
-                trash_cmd="$candidate"
-                break
-            fi
-        done
-    fi
+	if command -v trash-put >/dev/null 2>&1; then
+		trash_cmd=$(command -v trash-put)
+	elif [[ $(uname -s) == Darwin ]]; then
+		for candidate in \
+			/opt/homebrew/opt/trash-cli/bin/trash-put \
+			/usr/local/opt/trash-cli/bin/trash-put; do
+			if [[ -x "$candidate" ]]; then
+				trash_cmd="$candidate"
+				break
+			fi
+		done
+	fi
 
-    if [[ -n "$trash_cmd" ]]; then
-        "$trash_cmd" "$@"
-    else
-        printf 'Warning: trash-put not found; falling back to permanent deletion.\n' >&2
-        command rm "$@"
-    fi
+	if [[ -n "$trash_cmd" ]]; then
+		"$trash_cmd" "$@"
+	else
+		printf 'Warning: trash-put not found; falling back to permanent deletion.\n' >&2
+		command rm "$@"
+	fi
 }
 
 # Directory listing
@@ -45,19 +44,19 @@ alias vi='nvim'
 alias vimrc='$EDITOR ~/.vimrc'
 
 _shell_rc() {
-    if [ -n "${ZSH_VERSION:-}" ]; then
-        printf '%s\n' "$HOME/.zshrc"
-    else
-        printf '%s\n' "$HOME/.bashrc"
-    fi
+	if [ -n "${ZSH_VERSION:-}" ]; then
+		printf '%s\n' "$HOME/.zshrc"
+	else
+		printf '%s\n' "$HOME/.bashrc"
+	fi
 }
 
 sr() {
-    . "$(_shell_rc)"
+	. "$(_shell_rc)"
 }
 
 er() {
-    "${EDITOR:-vim}" "$(_shell_rc)" && sr
+	"${EDITOR:-vim}" "$(_shell_rc)" && sr
 }
 
 # Terminal and SSH
@@ -67,4 +66,3 @@ alias sshconf='vi ~/.ssh/config'
 # Development tools
 alias qiita='npx qiita'
 alias grep='grep --color=auto'
-

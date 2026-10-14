@@ -1,12 +1,12 @@
 # Interactive shells only
 case $- in
-    *i*) ;;
-      *) return ;;
+*i*) ;;
+*) return ;;
 esac
 
 # Initialize ble.sh (without attaching yet)
 if [[ -f "$HOME/.local/share/blesh/ble.sh" ]]; then
-    source "$HOME/.local/share/blesh/ble.sh" --attach=none
+	source "$HOME/.local/share/blesh/ble.sh" --attach=none
 fi
 
 # Locale and editor
@@ -15,11 +15,11 @@ export LANGUAGE=en_US:en
 
 # Editor fallback: nvim -> vim -> vi
 if command -v nvim >/dev/null 2>&1; then
-    export EDITOR=nvim
+	export EDITOR=nvim
 elif command -v vim >/dev/null 2>&1; then
-    export EDITOR=vim
+	export EDITOR=vim
 else
-    export EDITOR=vi
+	export EDITOR=vi
 fi
 export MAGICK=convert
 
@@ -28,7 +28,7 @@ export DOTPATH="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
 
 # Load private configuration
 [[ -f "$DOTPATH/private.d/init.sh" ]] &&
-    source "$DOTPATH/private.d/init.sh"
+	source "$DOTPATH/private.d/init.sh"
 
 # History
 shopt -s histappend
@@ -47,27 +47,27 @@ shopt -s checkwinsize
 [[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
 
 if [[ -x /usr/bin/dircolors ]]; then
-    if [[ -r "$HOME/.dircolors" ]]; then
-        eval "$(dircolors -b "$HOME/.dircolors")"
-    else
-        eval "$(dircolors -b)"
-    fi
+	if [[ -r "$HOME/.dircolors" ]]; then
+		eval "$(dircolors -b "$HOME/.dircolors")"
+	else
+		eval "$(dircolors -b)"
+	fi
 fi
 
 [[ -t 0 ]] && stty werase undef
 
 # Bash extensions and widgets
 for file in "$HOME"/.bash.d/*.bash; do
-    [[ -f "$file" ]] && source "$file"
+	[[ -f "$file" ]] && source "$file"
 done
 
 # Command completion
 if ! shopt -oq posix; then
-    if [[ -f /usr/share/bash-completion/bash_completion ]]; then
-        source /usr/share/bash-completion/bash_completion
-    elif [[ -f /etc/bash_completion ]]; then
-        source /etc/bash_completion
-    fi
+	if [[ -f /usr/share/bash-completion/bash_completion ]]; then
+		source /usr/share/bash-completion/bash_completion
+	elif [[ -f /etc/bash_completion ]]; then
+		source /etc/bash_completion
+	fi
 fi
 
 # User aliases
@@ -75,7 +75,7 @@ fi
 
 # Start tmux on an interactive terminal, unless already inside tmux
 if [[ -z ${TMUX:-} && -t 0 && -t 1 ]] && command -v tmux >/dev/null 2>&1; then
-    tmux -u new-session
+	tmux -u new-session
 fi
 
 # Attach ble.sh after shell initialization
