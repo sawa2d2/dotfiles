@@ -1,27 +1,2 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-source_branch=$(git symbolic-ref --quiet --short HEAD) || {
-    echo "Not on a branch." >&2
-    exit 1
-}
-
-repo_url=$(gh repo view --json url --jq '.url')
-target_branch=$(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')
-
-echo "$target_branch <- $source_branch"
-
-url="${repo_url}/compare/${target_branch}...${source_branch}#files_bucket"
-
-case "$(uname -s)" in
-    Linux)
-        nohup xdg-open "$url" >/dev/null 2>&1 </dev/null &
-        ;;
-    Darwin)
-        open "$url" >/dev/null 2>&1
-        ;;
-    *)
-        echo "Unsupported OS: $(uname -s)" >&2
-        exit 1
-        ;;
-esac
+exec gh pr create --web "$@"

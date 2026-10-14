@@ -4,7 +4,6 @@
 
 [alias]
     m = merge
-    sqm = merge --ff --squash
     us = restore --staged
     br = branch
     bra = branch -a
@@ -24,7 +23,7 @@
     fxcm = commit --amend -m
     cncm = commit --amend -m
     rmcm = commit --amend -m
-    fe = fetch
+    f = fetch
     ph = push -u origin HEAD
     rb = rebase -i
     co = checkout
