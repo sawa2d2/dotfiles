@@ -64,6 +64,20 @@ fi
 
 fbr() {
   local branch
+  if [[ ${1:-} == -d || ${1:-} == -D ]] && (($# <= 2)); then
+    if (($# == 2)); then
+      branch=$2
+    else
+      branch=$(_fzf_git_branches --bind 'alt-a:ignore' --border-label 'DELETE BRANCH (-d/-D)') || return
+      [[ -n $branch ]] || return
+    fi
+    git branch "$1" -- "$branch"
+    return
+  fi
+  if (($# != 0)); then
+    echo 'Usage: fbr [-d|-D [branch]]' >&2
+    return 2
+  fi
   branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
   [[ -n $branch ]] || return
   if git show-ref --verify --quiet "refs/remotes/$branch"; then

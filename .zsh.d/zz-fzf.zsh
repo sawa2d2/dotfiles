@@ -17,17 +17,31 @@ bindkey '^R' fzf-history
 
 fbr() {
     local branch
+    if [[ ${1:-} == -d || ${1:-} == -D ]] && (($# <= 2)); then
+      if (($# == 2)); then
+        branch=$2
+      else
+        branch=$(_fzf_git_branches --bind 'alt-a:ignore' --border-label 'DELETE BRANCH (-d/-D)') || return
+        [[ -n $branch ]] || return
+      fi
+      git branch "$1" -- "$branch"
+      return
+    fi
+    if (($# != 0)); then
+      echo 'Usage: fbr [-d|-D [branch]]' >&2
+      return 2
+    fi
     branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
     [[ -n $branch ]] || return
     if git show-ref --verify --quiet "refs/remotes/$branch"; then
-        local local_branch=${branch#*/}
-        if git show-ref --verify --quiet "refs/heads/$local_branch"; then
-            git switch "$local_branch"
-        else
-            git switch --track "$branch"
-        fi
+      local local_branch=${branch#*/}
+      if git show-ref --verify --quiet "refs/heads/$local_branch"; then
+        git switch "$local_branch"
+      else
+        git switch --track "$branch"
+      fi
     else
-        git switch "$branch"
+      git switch "$branch"
     fi
 }
 
