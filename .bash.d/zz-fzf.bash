@@ -62,7 +62,7 @@ fi
 
 fbr() {
     local branch
-    branch=$(_fzf_git_branches) || return
+    branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
     [[ -n $branch ]] || return
     if git show-ref --verify --quiet "refs/remotes/$branch"; then
         local local_branch=${branch#*/}
