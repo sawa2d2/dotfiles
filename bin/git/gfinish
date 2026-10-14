@@ -1,15 +1,67 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (($# != 0)); then
-	echo "Usage: gfinish" >&2
-	exit 2
-fi
+usage() {
+  echo 'Usage: gfinish [-y|--yes] [-m <message>]' >&2
+}
+
+assume_yes=false
+message=
+message_given=false
+while (($#)); do
+  case $1 in
+    -y|--yes) assume_yes=true; shift ;;
+    -m)
+      if (($# < 2)) || [[ -z $2 ]]; then
+        usage
+        exit 2
+      fi
+      message=$2
+      message_given=true
+      shift 2
+      ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage; exit 2 ;;
+  esac
+done
+
+confirm() {
+  if $assume_yes; then return 0; fi
+  local answer
+  read -r -p "$1 [y/N] " answer
+  [[ $answer == [yY] ]]
+}
+
+commit_squash() {
+  local worktree=$1
+  if $message_given || $assume_yes; then
+    git -C "$worktree" commit -m "$message"
+  else
+    git -C "$worktree" commit -e -m "$message"
+  fi
+}
 
 feature=$(git symbolic-ref --quiet --short HEAD) || {
 	echo "Not on a branch." >&2
 	exit 1
 }
+if ! $message_given; then
+  prefix=${feature%%/*}
+  description=${feature#*/}
+  if [[ $description == "$feature" ]]; then
+    message=${feature//-/ }
+  else
+    case $prefix in
+      feat|feature) prefix=feat ;;
+      fix|bugfix) prefix=fix ;;
+      docs|doc) prefix=docs ;;
+      chore|refactor|test|perf|ci|build|style) ;;
+      *) prefix=chore ;;
+    esac
+    message="$prefix: ${description//-/ }"
+  fi
+fi
+
 if [[ $feature == main ]]; then
 	echo "Run gfinish from a feature branch." >&2
 	exit 1
@@ -56,8 +108,7 @@ if [[ $current != "$primary" ]]; then
 
   echo "Squash $feature into main, push, and remove its worktree."
   git diff --stat main "$feature"
-  read -r -p "Continue? [y/N] " answer
-  [[ $answer == [yY] ]] || exit 0
+  confirm "Continue?" || exit 0
 
   # A detached temporary worktree keeps main unchanged until the squash commit succeeds.
   temporary=$(mktemp -d)
@@ -67,7 +118,7 @@ if [[ $current != "$primary" ]]; then
     echo "Squash failed in $temporary. Resolve or remove that worktree manually." >&2
     exit 1
   fi
-  git -C "$temporary" commit
+  commit_squash "$temporary"
   result=$(git -C "$temporary" rev-parse HEAD)
   git -C "$primary" merge --ff-only "$result"
   git push origin main
@@ -79,8 +130,7 @@ if [[ $current != "$primary" ]]; then
   git worktree remove "$current"
   git branch -D "$feature"
   if git ls-remote --exit-code --heads origin "$feature" >/dev/null 2>&1; then
-    read -r -p "Delete remote branch origin/$feature? [y/N] " answer
-    if [[ $answer == [yY] ]]; then
+    if confirm "Delete remote branch origin/$feature?"; then
       git push origin --delete "$feature"
     fi
   fi
@@ -90,8 +140,7 @@ fi
 
 echo "Squash $feature into main, then push and remove the local branch."
 git diff --stat main "$feature"
-read -r -p "Continue? [y/N] " answer
-[[ $answer == [yY] ]] || exit 0
+confirm "Continue?" || exit 0
 
 # Keep the original feature history intact, including when it has been pushed.
 temporary="gfinish-$$"
@@ -100,7 +149,7 @@ if ! git merge --squash "$feature"; then
 	echo "Squash failed on $temporary. Resolve or abort before retrying." >&2
 	exit 1
 fi
-git commit
+commit_squash .
 
 git switch main
 git merge --ff-only "$temporary"
@@ -110,8 +159,7 @@ git branch -d "$temporary"
 git branch -D "$feature"
 
 if git ls-remote --exit-code --heads origin "$feature" >/dev/null 2>&1; then
-	read -r -p "Delete remote branch origin/$feature? [y/N] " answer
-	if [[ $answer == [yY] ]]; then
+	if confirm "Delete remote branch origin/$feature?"; then
 		git push origin --delete "$feature"
 	fi
 fi
