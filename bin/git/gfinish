@@ -20,6 +20,18 @@ if [[ -n $(git status --porcelain) ]]; then
 fi
 
 git fetch origin main
+# Refuse to integrate a feature branch whose remote history differs.
+remote_feature=$(git ls-remote --heads origin "refs/heads/$feature") || {
+  echo "Could not check origin/$feature." >&2
+  exit 1
+}
+if [[ -n $remote_feature ]]; then
+  remote_sha=${remote_feature%%[[:space:]]*}
+  if [[ $(git rev-parse "$feature") != "$remote_sha" ]]; then
+    echo "Local $feature differs from origin/$feature; synchronize it first." >&2
+    exit 1
+  fi
+fi
 if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]]; then
 	echo "Local main differs from origin/main; synchronize it first." >&2
 	exit 1

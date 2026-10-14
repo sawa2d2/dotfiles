@@ -32,18 +32,39 @@ fbr() {
 }
 
 gwt() {
-  local branch path
-  if (($# > 1)); then
-    echo 'Usage: gwt [branch]' >&2
-    return 2
+  local branch path selected
+  if [[ ${1:-} == -d ]] && (($# <= 2)); then
+    if (($# == 2)); then
+      branch=$2
+    else
+      selected=$(git worktree list --porcelain | awk '
+        /^worktree / {
+          if (count++ > 1 && branch != "") print branch "|" path
+          path = substr($0, 10)
+          branch = ""
+        }
+        /^branch / { branch = substr($0, 19) }
+        END { if (count > 1 && branch != "") print branch "|" path }
+      ' | fzf --delimiter='|' --with-nth=1,2 --prompt='[ REMOVE WORKTREE ] >') || return
+      [[ -n $selected ]] || return
+      branch=${selected%%|*}
+    fi
+    path=$(gwt-path -d "$branch") || return
+    cd -- "$path"
+    return
   fi
-  if (($# == 1)); then
-    branch=$1
-  else
+  if (($# == 2)) && [[ $1 == -b ]]; then
+    path=$(gwt-path -b "$2") || return
+  elif (($# == 1)) && [[ $1 != -* ]]; then
+    path=$(gwt-path "$1") || return
+  elif (($# == 0)); then
     branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
     [[ -n $branch ]] || return
+    path=$(gwt-path "$branch") || return
+  else
+    echo 'Usage: gwt [-b|-d] [branch]' >&2
+    return 2
   fi
-  path=$(gwt-path "$branch") || return
   cd -- "$path"
 }
 

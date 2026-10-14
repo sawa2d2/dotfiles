@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (($# != 1)); then
-  echo 'Usage: gwt-path <branch>' >&2
+create_branch=0
+delete_worktree=0
+if (($# == 2)) && [[ $1 == -d ]]; then
+  delete_worktree=1
+  branch=$2
+elif (($# == 2)) && [[ $1 == -b ]]; then
+  create_branch=1
+  branch=$2
+elif (($# == 1)) && [[ $1 != -* ]]; then
+  branch=$1
+else
+  echo 'Usage: gwt-path [-b|-d] <branch>' >&2
   exit 2
 fi
-
-branch=$1
+if [[ $create_branch == 1 ]] && ! git check-ref-format --branch "$branch" >/dev/null; then
+  echo "Invalid branch name: $branch" >&2
+  exit 1
+fi
 git rev-parse --is-inside-work-tree >/dev/null
 common_dir=$(git rev-parse --path-format=absolute --git-common-dir)
 repo_name=$(basename "$(dirname "$common_dir")")
@@ -21,7 +33,14 @@ if [[ $primary_branch != main ]]; then
   exit 1
 fi
 
-if git show-ref --verify --quiet "refs/remotes/$branch"; then
+if [[ $delete_worktree == 1 && $branch == . ]]; then
+  branch=$(git symbolic-ref --quiet --short HEAD) || {
+    echo 'Current worktree has no branch.' >&2
+    exit 1
+  }
+fi
+
+if [[ $create_branch == 0 ]] && git show-ref --verify --quiet "refs/remotes/$branch"; then
   local_branch=${branch#*/}
   if [[ $local_branch == HEAD ]]; then
     echo 'Select a branch, not remote HEAD.' >&2
@@ -31,9 +50,15 @@ else
   local_branch=$branch
 fi
 
-if ! git show-ref --verify --quiet "refs/heads/$local_branch" &&
-   ! git show-ref --verify --quiet "refs/remotes/$branch"; then
-  echo "Branch not found: $branch" >&2
+if [[ $create_branch == 1 ]]; then
+  if git show-ref --verify --quiet "refs/heads/$branch" ||
+     git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    echo "Branch already exists: $branch" >&2
+    exit 1
+  fi
+elif ! git show-ref --verify --quiet "refs/heads/$local_branch" &&
+     ! git show-ref --verify --quiet "refs/remotes/$branch"; then
+  echo "Branch not found: $branch (use gwt -b $branch to create it)" >&2
   exit 1
 fi
 
@@ -41,6 +66,25 @@ existing=$(git worktree list --porcelain | awk -v ref="refs/heads/$local_branch"
   /^worktree / { path = substr($0, 10) }
   /^branch / && substr($0, 8) == ref { print path; exit }
 ')
+if [[ $delete_worktree == 1 ]]; then
+  if [[ -z $existing ]]; then
+    echo "No worktree for branch: $local_branch" >&2
+    exit 1
+  fi
+  if [[ $existing == "$primary" ]]; then
+    echo "Cannot remove the primary worktree: $primary" >&2
+    exit 1
+  fi
+  current=$(git rev-parse --show-toplevel)
+  git -C "$primary" worktree remove "$existing" >&2
+  if [[ $current == "$existing" ]]; then
+    printf '%s\n' "$primary"
+  else
+    printf '%s\n' "$current"
+  fi
+  exit 0
+fi
+
 if [[ -n $existing ]]; then
   printf '%s\n' "$existing"
   exit 0
@@ -50,7 +94,9 @@ branch_id=$(printf '%s' "$local_branch" | git hash-object --stdin | cut -c1-8)
 safe_name=${local_branch//\//-}
 target="$HOME/worktrees/${repo_name}-${repo_id}/${safe_name}-${branch_id}"
 mkdir -p "$(dirname "$target")"
-if git show-ref --verify --quiet "refs/heads/$local_branch"; then
+if [[ $create_branch == 1 ]]; then
+  git worktree add -b "$local_branch" "$target" main >&2
+elif git show-ref --verify --quiet "refs/heads/$local_branch"; then
   git worktree add "$target" "$local_branch" >&2
 else
   git worktree add --track -b "$local_branch" "$target" "$branch" >&2
