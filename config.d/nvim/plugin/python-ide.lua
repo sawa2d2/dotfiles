@@ -47,6 +47,8 @@ vim.lsp.config("pyright", {
 })
 vim.lsp.enable("pyright")
 
+vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+
 vim.diagnostic.config({
   underline = true,
   signs = true,
