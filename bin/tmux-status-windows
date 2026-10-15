@@ -48,10 +48,12 @@ if [[ $requested_row == --rows ]]; then
     while IFS= read -r label; do
         [[ -n $label ]] || continue
         length=$((${#label} + 2))
+        (( used > 0 )) && length=$((length + 1))
         limit=$((row == 0 ? first_width : second_width))
         if (( used > 0 && used + length > limit )); then
             row=1
             used=0
+            length=$((${#label} + 2))
         fi
         used=$((used + length))
     done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}')
@@ -60,13 +62,14 @@ if [[ $requested_row == --rows ]]; then
 fi
 
 # Query the theme once; use tmux format expansion to resolve custom colors.
-IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg <<< "$(
-    tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}'
+IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg bar_bg <<< "$(
+    tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}	#{@color_bg}'
 )"
 active_fg=${active_fg:-white}
 active_bg=${active_bg:-black}
 inactive_fg=${inactive_fg:-black}
 inactive_bg=${inactive_bg:-white}
+bar_bg=${bar_bg:-default}
 
 row=0
 used=0
@@ -74,15 +77,20 @@ while IFS=$'\t' read -r label active; do
     [[ -n $label ]] || continue
     entry=" $label "
     length=${#entry}
+    (( used > 0 )) && length=$((length + 1))
     limit=$((row == 0 ? first_width : second_width))
 
     if (( used > 0 && used + length > limit )); then
         row=$((row + 1))
         used=0
+        length=${#entry}
     fi
     (( row > 1 )) && break
 
     if (( row == requested_row )); then
+        if (( used > 0 )); then
+            printf '#[bg=%s] ' "$bar_bg"
+        fi
         if [[ $active == 1 ]]; then
             printf '#[fg=%s,bg=%s]%s' "$active_fg" "$active_bg" "$entry"
         else
