@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Show unstaged tracked changes and untracked file contents without staging.
+set -o pipefail
+
+if (( $# != 0 )); then
+    printf 'Usage: git dfu\n' >&2
+    exit 2
+fi
+
+git diff || exit $?
+
+while IFS= read -r -d '' file; do
+    git diff --no-index -- /dev/null "$file"
+    status=$?
+    # --no-index returns 1 when files differ; anything higher is an error.
+    if (( status > 1 )); then
+        exit "$status"
+    fi
+done < <(git ls-files --others --exclude-standard -z)
