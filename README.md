@@ -21,6 +21,21 @@ Existing settings are **replaced**, not merged; review the backup to retain any
 personal preferences. Re-running `./install` updates an existing symlink without
 creating another backup.
 
+## Testing
+
+Run `make test` before finishing changes. It runs the existing formatting and shell checks,
+verifies shell script syntax, smoke-tests Vim/Neovim tabline configuration,
+checks Neovim Lua syntax, and validates VS Code JSON.
+
+```bash
+make test
+```
+
+Required tools: `make`, `shfmt`, `shellcheck`, `bash`, `zsh`, and `python3`.
+Vim and Neovim smoke checks run when their respective executables are installed;
+unavailable editors are explicitly reported as skipped. Tests do not install or
+modify user configuration.
+
 ## Installing dependencies
 
 ### Nix installation
