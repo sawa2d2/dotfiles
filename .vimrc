@@ -76,3 +76,101 @@ let g:netrw_preview=1
 
 nnoremap <F2> :set invnumber invrelativenumber<CR>
 nnoremap <F3> :set invrelativenumber<CR>
+
+" Recognize extensionless Python and POSIX/Bash scripts by their shebang.
+function! s:ShebangLanguage() abort
+    let l:line = getline(1)
+    if l:line =~# '^#!\s*\%(/\S*/\)\?\%(env\s\+\%(-S\s\+\)\?\)\?python\%([0-9.]\+\)\?\%(\s\|$\)'
+        return 'python'
+    endif
+    if l:line =~# '^#!\s*\%(/\S*/\)\?\%(env\s\+\%(-S\s\+\)\?\)\?\%(ba\)\?sh\%(\s\|$\)'
+        return 'sh'
+    endif
+    return ''
+endfunction
+
+function! s:DetectShebangFiletype() abort
+    if expand('%:e') ==# '' && &buftype ==# ''
+        let l:lang = <SID>ShebangLanguage()
+        if l:lang !=# '' && &filetype !=# l:lang
+            execute 'setlocal filetype=' . l:lang
+        endif
+    endif
+endfunction
+
+augroup dotfiles_shebang
+    autocmd!
+    autocmd BufReadPost,BufEnter,TextChanged,TextChangedI,BufWritePre * call <SID>DetectShebangFiletype()
+augroup END
+
+" Format Python on save in both Vim and Neovim, if Ruff is available.
+function! s:RuffFormatOnSave() abort
+    if !executable('ruff') || &buftype !=# '' || !&modifiable || &readonly
+        return
+    endif
+
+    if &filetype !=# 'python' && expand('%:e') !=# 'py' && <SID>ShebangLanguage() !=# 'python'
+        return
+    endif
+
+    let l:original = getline(1, '$')
+    let l:command = 'ruff format --stdin-filename ' . shellescape(expand('%:p')) . ' -'
+    let l:formatted = systemlist(l:command, join(l:original, "\n") . "\n")
+    if v:shell_error
+        echohl WarningMsg
+        echom 'Ruff format failed; leaving buffer unchanged'
+        echohl None
+        return
+    endif
+    if l:formatted ==# l:original
+        return
+    endif
+
+    let l:view = winsaveview()
+    call setline(1, l:formatted)
+    if len(l:formatted) < len(l:original)
+        execute (len(l:formatted) + 1) . ',$delete _'
+    endif
+    call winrestview(l:view)
+endfunction
+
+augroup dotfiles_ruff
+    autocmd!
+    autocmd BufWritePre * call <SID>RuffFormatOnSave()
+augroup END
+
+" Format shell scripts on save in both Vim and Neovim.
+function! s:ShfmtOnSave() abort
+    if !executable('shfmt') || &buftype !=# '' || !&modifiable || &readonly
+        return
+    endif
+    " Include .sh files and extensionless sh/bash scripts.
+    if expand('%:e') !=# 'sh' && <SID>ShebangLanguage() !=# 'sh'
+        return
+    endif
+
+    let l:original = getline(1, '$')
+    let l:command = 'shfmt -filename ' . shellescape(expand('%:p')) . ' -i 2 -ci -sr'
+    let l:formatted = systemlist(l:command, join(l:original, "\n") . "\n")
+    if v:shell_error
+        echohl WarningMsg
+        echom 'shfmt failed; leaving buffer unchanged'
+        echohl None
+        return
+    endif
+    if l:formatted ==# l:original
+        return
+    endif
+
+    let l:view = winsaveview()
+    call setline(1, l:formatted)
+    if len(l:formatted) < len(l:original)
+        execute (len(l:formatted) + 1) . ',$delete _'
+    endif
+    call winrestview(l:view)
+endfunction
+
+augroup dotfiles_shfmt
+    autocmd!
+    autocmd BufWritePre * call <SID>ShfmtOnSave()
+augroup END
