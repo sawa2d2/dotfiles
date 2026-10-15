@@ -20,9 +20,6 @@ if [[ $create_branch == 1 ]] && ! git check-ref-format --branch "$branch" >/dev/
   exit 1
 fi
 git rev-parse --is-inside-work-tree >/dev/null
-common_dir=$(git rev-parse --path-format=absolute --git-common-dir)
-repo_name=$(basename "$(dirname "$common_dir")")
-repo_id=$(printf '%s' "$common_dir" | git hash-object --stdin | cut -c1-10)
 
 # The primary worktree is reserved for main; do not create a second main worktree.
 primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
@@ -90,9 +87,35 @@ if [[ -n $existing ]]; then
   exit 0
 fi
 
-branch_id=$(printf '%s' "$local_branch" | git hash-object --stdin | cut -c1-8)
-safe_name=${local_branch//\//-}
-target="$HOME/worktrees/${repo_name}-${repo_id}/${safe_name}-${branch_id}"
+# Use the origin namespace without distinguishing GitHub from GHE.
+origin_url=$(git remote get-url origin) || {
+  echo 'Origin remote is required for creating a worktree.' >&2
+  exit 1
+}
+# Accept SSH scp-style, ssh:// and https:// remotes.
+case "$origin_url" in
+  *://*)
+    remote_path=${origin_url#*://}
+    remote_path=${remote_path#*/}
+    ;;
+  *:*)
+    remote_path=${origin_url#*:}
+    ;;
+  *)
+    echo "Unsupported origin URL: $origin_url" >&2
+    exit 1
+    ;;
+esac
+remote_path=${remote_path%.git}
+remote_path=${remote_path%/}
+if [[ $remote_path =~ ^([^/]+)/([^/]+)$ ]]; then
+  owner=${BASH_REMATCH[1]}
+  repo=${BASH_REMATCH[2]}
+else
+  echo "Expected origin URL ending in owner/repo: $origin_url" >&2
+  exit 1
+fi
+target="$HOME/worktrees/$owner/$repo/$local_branch"
 mkdir -p "$(dirname "$target")"
 if [[ $create_branch == 1 ]]; then
   git worktree add -b "$local_branch" "$target" main >&2

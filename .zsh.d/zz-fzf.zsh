@@ -21,7 +21,6 @@ _fzf_git_select_branch() {
     grep -v '/HEAD$' |
     fzf --layout=reverse --no-sort --prompt='[ BRANCH ] > ' --preview 'git log --oneline --max-count=12 --color=always {}'
 }
-
 gbr() {
     local branch
     if [[ ${1:-} == -b ]]; then
