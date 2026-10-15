@@ -32,7 +32,7 @@ available separately via `make check` (or `make fmt-check` / `make lint`).
 make test
 ```
 
-Required tools: `make`, `bash`, `zsh`, and `python3`. `make check` additionally requires `shfmt` and `shellcheck`.
+Required tools: `make`, `bash`, and `python3`. Zsh, Vim, and Neovim checks are skipped with a message when the respective executables are unavailable. `make check` additionally requires `shfmt`, `shellcheck`, and `zsh`.
 Vim and Neovim smoke checks run when their respective executables are installed;
 unavailable editors are explicitly reported as skipped. Tests do not install or
 modify user configuration.
