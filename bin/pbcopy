@@ -1,16 +1,41 @@
 #!/usr/bin/env bash
 set -o pipefail
 
-# Strip ANSI color codes before copying
-case "$(uname -s)" in
-Linux)
-	sed -E 's/\x1B\[[0-9;]*[mK]//g' | xsel --clipboard --input
-	;;
-Darwin)
-	sed -E 's/\x1B\[[0-9;]*[mK]//g' | /usr/bin/pbcopy
-	;;
+case "${1:-}" in
+"")
+    ;;
+--tee)
+    if [[ ! -w /dev/tty ]]; then
+        echo "pbcopy --tee requires a terminal" >&2
+        exit 1
+    fi
+    ;;
 *)
-	echo "Unsupported OS: $(uname -s)" >&2
-	exit 1
-	;;
+    echo "Usage: pbcopy [--tee]" >&2
+    exit 2
+    ;;
 esac
+if (( $# > 1 )); then
+    echo "Usage: pbcopy [--tee]" >&2
+    exit 2
+fi
+
+# Display the original stream before stripping ANSI color codes for the clipboard.
+if [[ ${1:-} == --tee ]]; then
+    tee /dev/tty
+else
+    cat
+fi |
+    sed -E 's/\x1B\[[0-9;]*[mK]//g' |
+    case "$(uname -s)" in
+    Linux)
+        xsel --clipboard --input
+        ;;
+    Darwin)
+        /usr/bin/pbcopy
+        ;;
+    *)
+        echo "Unsupported OS: $(uname -s)" >&2
+        exit 1
+        ;;
+    esac
