@@ -73,3 +73,9 @@ done
 ```
 
 Restart Neovim after installation.
+
+## iTerm2 configuration (macOS)
+
+In iTerm2, open **Settings → General → Settings**, enable **Load settings from a custom folder or URL**, and select this repository's `iterm2/` directory. Enable **Save changes to folder when iTerm2 quits** to keep the configuration in sync.
+
+This is configured directly in iTerm2; `./install` is not involved.

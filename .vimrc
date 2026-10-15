@@ -162,6 +162,39 @@ nmap <C-w><left> <C-w><
 nmap <C-w><right> <C-w>>
 nmap <C-w><up> <C-w>+
 nmap <C-w><down> <C-w>-
+
+" Move the nearest split border with Alt/Option + hjkl.
+" Keep the movement direction consistent regardless of which pane has focus.
+function! DotfilesMoveSplitBorder(direction) abort
+    if a:direction ==# 'h' || a:direction ==# 'l'
+        if !exists('*win_move_separator')
+            return
+        endif
+        let l:target = winnr()
+        if winnr('l') == l:target
+            let l:target = winnr('h')
+        endif
+        if l:target != winnr() || winnr('l') != winnr()
+            call win_move_separator(l:target, a:direction ==# 'l' ? 3 : -3)
+        endif
+    else
+        if !exists('*win_move_statusline')
+            return
+        endif
+        let l:target = winnr()
+        if winnr('j') == l:target
+            let l:target = winnr('k')
+        endif
+        if l:target != winnr() || winnr('j') != winnr()
+            call win_move_statusline(l:target, a:direction ==# 'j' ? 2 : -2)
+        endif
+    endif
+endfunction
+
+nnoremap <silent> <M-h> :call DotfilesMoveSplitBorder('h')<CR>
+nnoremap <silent> <M-j> :call DotfilesMoveSplitBorder('j')<CR>
+nnoremap <silent> <M-k> :call DotfilesMoveSplitBorder('k')<CR>
+nnoremap <silent> <M-l> :call DotfilesMoveSplitBorder('l')<CR>
 imap <C-c> <Esc>
 
 "tab
