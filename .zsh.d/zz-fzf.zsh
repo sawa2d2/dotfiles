@@ -15,6 +15,13 @@ zle -N fzf-history
 bindkey '^R' fzf-history
 
 
+# Select a branch name without relying on fzf-git.sh's private return format.
+_fzf_git_select_branch() {
+  git for-each-ref --format='%(refname:short)' refs/heads refs/remotes |
+    grep -v '/HEAD$' |
+    fzf --prompt='[ BRANCH ] > ' --preview 'git log --oneline --max-count=12 --color=always {}'
+}
+
 gbr() {
     local branch
     if [[ ${1:-} == -b ]]; then
@@ -36,7 +43,7 @@ gbr() {
       return
     fi
     if (($# == 0)); then
-      branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
+      branch=$(_fzf_git_select_branch) || return
       [[ -n $branch ]] || return
     elif (($# == 1)) && [[ -n $1 && $1 != -* ]]; then
       branch=$1
@@ -57,7 +64,7 @@ gbr() {
 }
 
 gwt() {
-  local branch path selected
+  local branch worktree_dir selected
   if [[ ${1:-} == -d ]] && (($# <= 2)); then
     if (($# == 2)); then
       branch=$2
@@ -74,23 +81,23 @@ gwt() {
       [[ -n $selected ]] || return
       branch=${selected%%|*}
     fi
-    path=$(gwt-path -d "$branch") || return
-    cd -- "$path"
+    worktree_dir=$(gwt-path -d "$branch") || return
+    cd -- "$worktree_dir"
     return
   fi
   if (($# == 2)) && [[ $1 == -b ]]; then
-    path=$(gwt-path -b "$2") || return
+    worktree_dir=$(gwt-path -b "$2") || return
   elif (($# == 1)) && [[ $1 != -* ]]; then
-    path=$(gwt-path "$1") || return
+    worktree_dir=$(gwt-path "$1") || return
   elif (($# == 0)); then
-    branch=$(_fzf_git_branches --bind "start:reload:bash \"$__fzf_git\" --list all-branches") || return
+    branch=$(_fzf_git_select_branch) || return
     [[ -n $branch ]] || return
-    path=$(gwt-path "$branch") || return
+    worktree_dir=$(gwt-path "$branch") || return
   else
     echo 'Usage: gwt [-b|-d] [branch]' >&2
     return 2
   fi
-  cd -- "$path"
+  cd -- "$worktree_dir"
 }
 
 # Load fzf-git shortcuts after the other interactive key bindings.

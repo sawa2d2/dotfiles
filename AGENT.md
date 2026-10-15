@@ -32,5 +32,6 @@
 
 - Preserve the distinction between per-user and system-wide installation.
 - Treat PATH precedence, ownership, sudoers changes, and privileged installation as security-sensitive.
+- In Zsh-sourced functions, avoid local names that collide with special parameters (especially `path`/`PATH`, `status`, and `commands`); Bash-only variables are unaffected.
 - Keep patches focused and commit messages concise.
 - Work on a dedicated branch unless instructed otherwise. Never create PRs, squash, or merge without an explicit request.
