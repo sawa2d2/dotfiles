@@ -17,6 +17,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
   group = vim.api.nvim_create_augroup("DotfilesStatusDiagnostics", { clear = true }),
   callback = function()
     vim.cmd("redrawstatus!")
+    vim.cmd("redrawtabline")
   end,
 })
 

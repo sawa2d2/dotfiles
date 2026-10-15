@@ -36,6 +36,14 @@ vim.lsp.config("pyright", {
   filetypes = { "python" },
   root_markers = { "pyrightconfig.json", "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
   capabilities = capabilities,
+  -- Default to strict checks; project-level Pyright configuration can override this.
+  settings = {
+    python = {
+      analysis = {
+        typeCheckingMode = "strict",
+      },
+    },
+  },
 })
 vim.lsp.enable("pyright")
 

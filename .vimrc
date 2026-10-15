@@ -38,9 +38,23 @@ function! DotfilesTabline() abort
             let l:name = '[No Name]'
         endif
         let l:name = substitute(l:name, '%', '%%', 'g')
+        let l:modified = l:buffer > 0 && getbufvar(l:buffer, '&modified')
+        let l:severity = 0
+        if has('nvim') && l:buffer > 0
+            let l:counts = luaeval("require('dotfiles_status').counts(_A)", l:buffer)
+            let l:severity = l:counts[0] > 0 ? 2 : (l:counts[1] > 0 ? 1 : 0)
+        endif
+
         let l:line .= '%' . l:tab . 'T'
-        let l:line .= l:tab == tabpagenr() ? '%#TabLineSel#' : '%#TabLine#'
-        let l:line .= ' ' . l:name . ' '
+        if l:severity == 2
+            let l:group = l:tab == tabpagenr() ? 'DotTabError' : 'DotTabErrorNC'
+        elseif l:severity == 1
+            let l:group = l:tab == tabpagenr() ? 'DotTabWarn' : 'DotTabWarnNC'
+        else
+            let l:group = l:tab == tabpagenr() ? 'TabLineSel' : 'TabLine'
+        endif
+        let l:line .= '%#' . l:group . '#'
+        let l:line .= ' ' . l:name . (l:modified ? ' *' : '') . ' '
     endfor
     let l:line .= '%#TabLineFill#%T%='
     if !empty(g:dotfiles_git_branch)
@@ -49,6 +63,12 @@ function! DotfilesTabline() abort
     return l:line
 endfunction
 set tabline=%!DotfilesTabline()
+
+" Update unsaved markers on tab titles as buffer contents change.
+augroup dotfiles_tabline_modified
+    autocmd!
+    autocmd TextChanged,TextChangedI,BufWritePost * redrawtabline
+augroup END
 
 " Cache the branch name instead of spawning Git during each tabline redraw.
 let g:dotfiles_git_branch = ''
