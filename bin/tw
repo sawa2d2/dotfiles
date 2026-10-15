@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+tmux select-window -t ":${1:?Usage: tw <window-number>}"
