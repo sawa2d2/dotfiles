@@ -23,7 +23,7 @@ test: check test-vim test-lua test-json
 test-vim:
 	@if command -v vim >/dev/null 2>&1; then \
 		vim -Nu NONE -i NONE -n -es \
-			-c 'source .vimrc' -c 'call DotfilesTabline()' -c 'qa!'; \
+			-c 'source .vimrc' -c 'call DotfilesTabline()' -c 'qa!' || exit 1; \
 	else echo 'SKIP Vim smoke test (vim unavailable)'; fi
 	@if command -v nvim >/dev/null 2>&1; then \
 		nvim --headless -u NONE -i NONE \
