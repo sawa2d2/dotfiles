@@ -72,6 +72,13 @@ highlight DotStatusMeta guifg=$COLOR_FG guibg=$COLOR_SELECTED
 highlight TabLineSel guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE gui=bold
 highlight TabLine guifg=$COLOR_FG guibg=$COLOR_INACTIVE
 highlight TabLineFill guibg=$COLOR_INACTIVE
+" Git gutter colors, shared across all theme variants.
+highlight GitSignsAdd guifg=$COLOR_GIT_CLEAN
+highlight GitSignsChange guifg=$COLOR_GIT_STAGED
+highlight GitSignsDelete guifg=$COLOR_GIT_MIXED
+highlight GitSignsTopdelete guifg=$COLOR_GIT_MIXED
+highlight GitSignsChangedelete guifg=$COLOR_GIT_MIXED
+highlight GitSignsUntracked guifg=$COLOR_GIT_CLEAN
 highlight DotTabError guifg=$COLOR_DIAG_ERROR guibg=$COLOR_ACTIVE gui=bold
 highlight DotTabWarn guifg=$COLOR_DIAG_WARN guibg=$COLOR_ACTIVE gui=bold
 highlight DotTabErrorNC guifg=$COLOR_DIAG_ERROR_INACTIVE guibg=$COLOR_INACTIVE
