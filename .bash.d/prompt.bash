@@ -109,7 +109,8 @@ _prompt_command() {
   fi
 
   # $ for regular users, # for root.
-  PS1+=" ${_PROMPT_RESET}\\\$ "
+  [[ -n "$branch" ]] && PS1+=" "
+  PS1+="${_PROMPT_RESET}\\\$ "
 }
 
 PROMPT_COMMAND=_prompt_command

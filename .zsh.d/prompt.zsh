@@ -104,7 +104,8 @@ _prompt_command_zsh() {
     fi
 
     # $ for regular users, # for root.
-    PROMPT+=" %(!.#.$) "
+    [[ -n "$branch" ]] && PROMPT+=" "
+    PROMPT+="%(!.#.$) "
 }
 
 # Register once, even when sourced repeatedly.
