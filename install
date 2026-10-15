@@ -99,6 +99,15 @@ if [ -x "$DOTPATH/theme/sync" ]; then
 
     link "$DOTPATH/.tmux.theme.conf" "$HOME/.tmux.theme.conf"
     link "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
+
+    # A previous repository location can leave the theme symlink broken.
+    # Reload again after relinking so an existing tmux session picks up the theme.
+    if command -v tmux >/dev/null 2>&1 &&
+       tmux list-sessions >/dev/null 2>&1 &&
+       [ -f "$HOME/.tmux.conf" ] &&
+       [ -f "$HOME/.tmux.theme.conf" ]; then
+        tmux source-file "$HOME/.tmux.conf"
+    fi
 fi
 
 # Private configuration

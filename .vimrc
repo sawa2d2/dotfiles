@@ -27,6 +27,25 @@ set showmatch
 set laststatus=2
 set showtabline=2
 
+" Show only file names in tabs, avoiding abbreviated parent paths.
+function! DotfilesTabline() abort
+    let l:line = ''
+    for l:tab in range(1, tabpagenr("$"))
+        let l:buffers = tabpagebuflist(l:tab)
+        let l:buffer = get(l:buffers, tabpagewinnr(l:tab) - 1, -1)
+        let l:name = fnamemodify(bufname(l:buffer), ':t')
+        if empty(l:name)
+            let l:name = '[No Name]'
+        endif
+        let l:name = substitute(l:name, '%', '%%', 'g')
+        let l:line .= '%' . l:tab . 'T'
+        let l:line .= l:tab == tabpagenr() ? '%#TabLineSel#' : '%#TabLine#'
+        let l:line .= ' ' . l:name . ' '
+    endfor
+    return l:line . '%#TabLineFill#%T'
+endfunction
+set tabline=%!DotfilesTabline()
+
 " Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
 function! DotfilesStatusline() abort
     let l:window = get(g:, 'statusline_winid', win_getid())
@@ -47,9 +66,9 @@ function! DotfilesStatusline() abort
             let l:name = 'NORMAL'
         endif
         let l:line = '%#DotStatusMode# ' . l:name . ' '
-        let l:line .= '%#DotStatusFile# %f %m%r '
+        let l:line .= '%#DotStatusFile# %t %m%r '
     else
-        let l:line = '%#StatusLineNC# %f %m%r '
+        let l:line = '%#StatusLineNC# %t %m%r '
     endif
 
     let l:line .= '%#' . l:base . '#%='
