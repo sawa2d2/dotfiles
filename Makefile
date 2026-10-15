@@ -21,8 +21,10 @@ check: fmt-check lint
 test: test-shell test-vim test-lua test-json
 
 test-shell:
-	@for file in $(BASH_CONFIG) $(BASH_SCRIPTS); do bash -n "$$file" || exit 1; done
-	@for file in $(ZSH_CONFIG); do zsh -n "$$file" || exit 1; done
+	@for file in $(BASH_CONFIG) $(BASH_SCRIPTS); do bash -n "$file" || exit 1; done
+	@if command -v zsh >/dev/null 2>&1; then \
+		for file in $(ZSH_CONFIG); do zsh -n "$file" || exit 1; done; \
+	else echo "SKIP Zsh syntax test (zsh unavailable)"; fi
 
 test-vim:
 	@if command -v vim >/dev/null 2>&1; then \
