@@ -56,3 +56,17 @@ vim.diagnostic.config({
   update_in_insert = false,
   severity_sort = true,
 })
+
+-- Diagnostic navigation and lists (Neovim built-ins; no extra plugin).
+vim.keymap.set("n", "]d", function()
+  vim.diagnostic.jump({ count = 1, float = true })
+end, { desc = "Next diagnostic" })
+
+vim.keymap.set("n", "[d", function()
+  vim.diagnostic.jump({ count = -1, float = true })
+end, { desc = "Previous diagnostic" })
+
+vim.keymap.set("n", "<leader>dl", function()
+  vim.diagnostic.setqflist({ open = true })
+end, { desc = "All diagnostics (quickfix)" })
+
