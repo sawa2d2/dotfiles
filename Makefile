@@ -1,4 +1,4 @@
-.PHONY: fmt fmt-check lint check test test-vim test-lua test-json
+.PHONY: fmt fmt-check lint check test test-shell test-vim test-lua test-json
 
 BASH_CONFIG := .bashrc .bash_aliases $(wildcard .bash.d/*.bash)
 FMT_CONFIG := $(filter-out .bash.d/path.bash,$(BASH_CONFIG))
@@ -18,7 +18,11 @@ check: fmt-check lint
 	@for file in $(BASH_CONFIG) $(BASH_SCRIPTS); do bash -n "$$file" || exit 1; done
 	@for file in $(ZSH_CONFIG); do zsh -n "$$file" || exit 1; done
 
-test: check test-vim test-lua test-json
+test: test-shell test-vim test-lua test-json
+
+test-shell:
+	@for file in $(BASH_CONFIG) $(BASH_SCRIPTS); do bash -n "$file" || exit 1; done
+	@for file in $(ZSH_CONFIG); do zsh -n "$file" || exit 1; done
 
 test-vim:
 	@if command -v vim >/dev/null 2>&1; then \
