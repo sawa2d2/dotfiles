@@ -8,6 +8,19 @@ Run `./install` from the repository root to install the dotfiles.
 ./install
 ```
 
+## VS Code User Settings
+
+`./install` links `config.d/vscode/settings.json` to the VS Code User Settings path:
+
+- Ubuntu/Linux: `~/.config/Code/User/settings.json`
+- macOS: `~/Library/Application Support/Code/User/settings.json`
+
+If an existing regular `settings.json` is present, it is moved to an available
+`settings.json.backup` (or numbered backup) before the shared settings are linked.
+Existing settings are **replaced**, not merged; review the backup to retain any
+personal preferences. Re-running `./install` updates an existing symlink without
+creating another backup.
+
 ## Installing dependencies
 
 ### Nix installation

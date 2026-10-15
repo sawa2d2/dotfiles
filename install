@@ -86,10 +86,37 @@ link "$DOTPATH/bin" "$HOME/bin"
 if [[ -d "$DOTPATH/config.d" ]]; then
     while IFS= read -r -d '' src; do
         relative="${src#"$DOTPATH/config.d/"}"
+        # VS Code has platform-specific User Settings paths.
+        [[ "$relative" == vscode/* ]] && continue
         dst="$HOME/.config/$relative"
         mkdir -p "$(dirname "$dst")"
         link "$src" "$dst"
     done < <(find "$DOTPATH/config.d" -type f -print0)
+fi
+
+# VS Code User Settings (replace existing file, preserving a backup).
+vscode_src="$DOTPATH/config.d/vscode/settings.json"
+if [[ -f "$vscode_src" ]]; then
+    case "$(uname -s)" in
+        Darwin) vscode_dest="$HOME/Library/Application Support/Code/User/settings.json" ;;
+        Linux)  vscode_dest="$HOME/.config/Code/User/settings.json" ;;
+        *)      vscode_dest="" ;;
+    esac
+
+    if [[ -n "$vscode_dest" ]]; then
+        mkdir -p "$(dirname "$vscode_dest")"
+        if [[ -e "$vscode_dest" && ! -L "$vscode_dest" ]]; then
+            backup="$vscode_dest.backup"
+            backup_num=1
+            while [[ -e "$backup" || -L "$backup" ]]; do
+                backup="$vscode_dest.backup.$backup_num"
+                backup_num=$((backup_num + 1))
+            done
+            mv "$vscode_dest" "$backup"
+            echo "Backup: $backup"
+        fi
+        link "$vscode_src" "$vscode_dest"
+    fi
 fi
 
 # Generate shared theme
