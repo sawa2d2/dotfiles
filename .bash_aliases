@@ -52,7 +52,7 @@ alias ll='\ls -lh'
 alias la='\ls -lha'
 
 # Editors
-alias vi='nvim'
+unalias vi 2>/dev/null || true
 alias vimrc='$EDITOR ~/.vimrc'
 
 _shell_rc() {

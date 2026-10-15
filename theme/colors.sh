@@ -44,6 +44,12 @@ esac
 # Match the tmux status bar background to the active theme.
 COLOR_BG="$COLOR_ACCENT"
 
+# Diagnostics: distinct from focus; muted versions remain legible on inactive bars.
+COLOR_DIAG_ERROR='#e27983'
+COLOR_DIAG_WARN='#e5a45b'
+COLOR_DIAG_ERROR_INACTIVE='#902c3b'
+COLOR_DIAG_WARN_INACTIVE='#805000'
+
 COLOR_GIT_CLEAN='#55c9a6'
 COLOR_GIT_DIRTY='#e5a45b'
 COLOR_GIT_STAGED='#70aee0'

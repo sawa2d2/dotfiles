@@ -3,6 +3,11 @@ if !empty(globpath(&runtimepath, 'colors/molokai.vim'))
     colorscheme molokai
 endif
 
+" Apply shared UI colors after Molokai (or any default colorscheme).
+if filereadable(expand('~/.vim.theme.vim'))
+    execute 'source' fnameescape(expand('~/.vim.theme.vim'))
+endif
+
 set fenc=utf-8
 set nobackup
 set noswapfile
@@ -21,6 +26,49 @@ set smartindent
 set showmatch
 set laststatus=2
 set showtabline=2
+
+" Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
+function! DotfilesStatusline() abort
+    let l:window = get(g:, 'statusline_winid', win_getid())
+    let l:active = (l:window == win_getid())
+    let l:base = l:active ? 'StatusLine' : 'StatusLineNC'
+
+    if l:active
+        let l:mode = mode(1)
+        if l:mode =~# '^i'
+            let l:name = 'INSERT'
+        elseif l:mode =~# '^[vV\x16]'
+            let l:name = 'VISUAL'
+        elseif l:mode =~# '^R'
+            let l:name = 'REPLACE'
+        elseif l:mode =~# '^c'
+            let l:name = 'COMMAND'
+        else
+            let l:name = 'NORMAL'
+        endif
+        let l:line = '%#DotStatusMode# ' . l:name . ' '
+        let l:line .= '%#DotStatusFile# %f %m%r '
+    else
+        let l:line = '%#StatusLineNC# %f %m%r '
+    endif
+
+    let l:line .= '%#' . l:base . '#%='
+    if has('nvim') && winbufnr(l:window) > 0
+        let l:counts = luaeval("require('dotfiles_status').counts(_A)", winbufnr(l:window))
+        if l:counts[0] > 0
+            let l:group = l:active ? 'DotStatusError' : 'DotStatusErrorNC'
+            let l:line .= '%#' . l:group . '# E ' . l:counts[0] . ' '
+        endif
+        if l:counts[1] > 0
+            let l:group = l:active ? 'DotStatusWarn' : 'DotStatusWarnNC'
+            let l:line .= '%#' . l:group . '# W ' . l:counts[1] . ' '
+        endif
+    endif
+
+    let l:meta = l:active ? 'DotStatusMeta' : 'StatusLineNC'
+    return l:line . '%#' . l:meta . '# %y  %l:%c '
+endfunction
+set statusline=%!DotfilesStatusline()
 set wildmode=list:longest
 nnoremap j gj
 nnoremap k gk
