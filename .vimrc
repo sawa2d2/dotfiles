@@ -42,9 +42,31 @@ function! DotfilesTabline() abort
         let l:line .= l:tab == tabpagenr() ? '%#TabLineSel#' : '%#TabLine#'
         let l:line .= ' ' . l:name . ' '
     endfor
-    return l:line . '%#TabLineFill#%T'
+    let l:line .= '%#TabLineFill#%T%='
+    if !empty(g:dotfiles_git_branch)
+        let l:line .= '%#TabLine# (' . g:dotfiles_git_branch . ') '
+    endif
+    return l:line
 endfunction
 set tabline=%!DotfilesTabline()
+
+" Cache the branch name instead of spawning Git during each tabline redraw.
+let g:dotfiles_git_branch = ''
+function! s:UpdateGitBranch() abort
+    let g:dotfiles_git_branch = ''
+    if !executable('git')
+        return
+    endif
+    let l:branch = systemlist('git -C ' . shellescape(getcwd()) . ' symbolic-ref --quiet --short HEAD 2>/dev/null')
+    if v:shell_error == 0 && !empty(l:branch)
+        let g:dotfiles_git_branch = substitute(l:branch[0], '%', '%%', 'g')
+    endif
+endfunction
+
+augroup dotfiles_git_branch
+    autocmd!
+    autocmd VimEnter,BufEnter,DirChanged,FocusGained * call <SID>UpdateGitBranch()
+augroup END
 
 " Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
 function! DotfilesStatusline() abort
