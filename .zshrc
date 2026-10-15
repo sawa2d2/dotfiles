@@ -16,6 +16,11 @@ fi
 
 export MAGICK=convert
 
+# Keep readline-style Ctrl-A/Ctrl-E editing even when EDITOR is nvim/vi.
+bindkey -e
+bindkey '^A' beginning-of-line
+bindkey '^E' end-of-line
+
 # Resolve dotfiles root
 export DOTPATH="$(dirname "$(realpath "${(%):-%x}")")"
 
