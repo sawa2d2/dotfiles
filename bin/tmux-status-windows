@@ -4,23 +4,28 @@ set -euo pipefail
 
 # Refresh session-level status heights when windows or clients change.
 if [[ ${1:-} == --sync && $# == 1 ]]; then
-    declare -A session_widths=()
-    # client_width is available in client context, not list-sessions.
-    # If several clients share a session, fit the narrowest client.
+    # Aggregate client widths with awk to support macOS's default Bash 3.2.
+    # For shared sessions, use the narrowest attached client's width.
     while IFS=$'\t' read -r session width; do
         [[ -n $session && $width =~ ^[0-9]+$ ]] || continue
-        if [[ -z ${session_widths[$session]+x} ]] || (( width < session_widths[$session] )); then
-            session_widths[$session]=$width
-        fi
-    done < <(tmux list-clients -F '#{session_id}	#{client_width}')
-    for session in "${!session_widths[@]}"; do
-        rows=$("$0" --rows "$session" "${session_widths[$session]}") || continue
+        rows=$("$0" --rows "$session" "$width") || continue
         current=$(tmux show-options -v -t "$session" status 2>/dev/null) || continue
+        # Store rendered rows synchronously; tmux status #() is asynchronous
+        # and may not have a usable result when the status is redrawn.
+        tmux set-option -t "$session" @tmux_window_row0 "$("$0" 0 "$session" "$width")"
+        tmux set-option -t "$session" @tmux_window_row1 "$("$0" 1 "$session" "$width")"
         target=$rows
         [[ $rows == 1 ]] && target=on
         [[ $current == "$target" ]] ||
             tmux set-option -t "$session" status "$target"
-    done
+    done < <(
+        tmux list-clients -F '#{session_id}	#{client_width}' |
+            awk -F '\t' '$2 ~ /^[0-9]+$/ && $1 != "" {
+                if (!($1 in widths) || $2 < widths[$1]) widths[$1] = $2
+            } END {
+                for (session in widths) print session "\t" widths[session]
+            }'
+    )
     exit 0
 fi
 
@@ -42,7 +47,7 @@ if [[ $requested_row == --rows ]]; then
     used=0
     while IFS= read -r label; do
         [[ -n $label ]] || continue
-        length=$(("${#label}" + 2))
+        length=$((${#label} + 2))
         limit=$((row == 0 ? first_width : second_width))
         if (( used > 0 && used + length > limit )); then
             row=1
