@@ -87,6 +87,29 @@ done
 
 Restart Neovim after installation.
 
+
+### Neovim Japanese input (optional)
+
+Neovim switches the IME to an ASCII/off state when leaving Insert mode and
+restores the previous state on the next InsertEnter. This is implemented by
+`config.d/nvim/plugin/ime-switch.lua` and only activates when a supported
+command is installed:
+
+- macOS: install `macism` (`brew tap laishulu/homebrew && brew install macism`).
+  The ASCII input source defaults to `com.apple.keylayout.ABC`; verify it is
+  enabled on your Mac with `macism` while using English input. If your English
+  input source has another ID, set
+  `let g:dotfiles_ime_ascii_source = 'YOUR_INPUT_SOURCE_ID'` in
+  `config.d/nvim/init.vim` *before* Neovim plugins load.
+- Ubuntu (Fcitx5): ensure `fcitx5-remote` is installed and available in PATH.
+  The plugin saves whether Fcitx5 was active, turns it off on InsertLeave,
+  then reactivates it on InsertEnter.
+
+Without those commands, the plugin is inert. A terminal's IME can intercept
+uncommitted Japanese text before Neovim receives keystrokes, so finish or
+cancel an active conversion before using the mode-exit shortcut. Existing
+`Ctrl+C`-to-`Esc` mapping remains unchanged.
+
 ## iTerm2 configuration (macOS)
 
 In iTerm2, open **Settings → General → Settings**, enable **Load settings from a custom folder or URL**, and select this repository's `iterm2/` directory. Enable **Save changes to folder when iTerm2 quits** to keep the configuration in sync.
