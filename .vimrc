@@ -20,6 +20,7 @@ set smartindent
 "set visualbell
 set showmatch
 set laststatus=2
+set showtabline=2
 set wildmode=list:longest
 nnoremap j gj
 nnoremap k gk

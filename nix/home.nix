@@ -29,6 +29,8 @@
   home.file.".local/share/nvim/site/pack/dotfiles/start/cmp-nvim-lsp".source = pkgs.vimPlugins.cmp-nvim-lsp;
   home.file.".local/share/nvim/site/pack/dotfiles/start/cmp-buffer".source = pkgs.vimPlugins.cmp-buffer;
   home.file.".local/share/nvim/site/pack/dotfiles/start/cmp-path".source = pkgs.vimPlugins.cmp-path;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/plenary-nvim".source = pkgs.vimPlugins.plenary-nvim;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/telescope-nvim".source = pkgs.vimPlugins.telescope-nvim;
 
   # Zsh plugins, sourced from stable Home Manager-managed paths.
   home.file.".local/share/zsh/plugins/zsh-autosuggestions".source = "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions";
