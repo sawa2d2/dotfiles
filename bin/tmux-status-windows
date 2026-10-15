@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Render the requested row of a two-line tmux window list.
+set -euo pipefail
+
+# Refresh session-level status heights when windows or clients change.
+if [[ ${1:-} == --sync && $# == 1 ]]; then
+    declare -A session_widths=()
+    # client_width is available in client context, not list-sessions.
+    # If several clients share a session, fit the narrowest client.
+    while IFS=$'\t' read -r session width; do
+        [[ -n $session && $width =~ ^[0-9]+$ ]] || continue
+        if [[ -z ${session_widths[$session]+x} ]] || (( width < session_widths[$session] )); then
+            session_widths[$session]=$width
+        fi
+    done < <(tmux list-clients -F '#{session_id}	#{client_width}')
+    for session in "${!session_widths[@]}"; do
+        rows=$("$0" --rows "$session" "${session_widths[$session]}") || continue
+        current=$(tmux show-options -v -t "$session" status 2>/dev/null) || continue
+        target=$rows
+        [[ $rows == 1 ]] && target=on
+        [[ $current == "$target" ]] ||
+            tmux set-option -t "$session" status "$target"
+    done
+    exit 0
+fi
+
+if (( $# != 3 )) || [[ $1 != 0 && $1 != 1 && $1 != --rows ]] || [[ ! $3 =~ ^[0-9]+$ ]]; then
+    printf 'Usage: tmux-status-windows <0|1|--rows> <session-id> <width>\n' >&2
+    exit 2
+fi
+
+requested_row=$1
+session_id=$2
+width=$3
+
+# Reserve space for the prefix indicator and date/time on row zero.
+first_width=$((width > 34 ? width - 34 : 1))
+second_width=$((width > 3 ? width - 3 : 1))
+
+if [[ $requested_row == --rows ]]; then
+    row=0
+    used=0
+    while IFS= read -r label; do
+        [[ -n $label ]] || continue
+        length=$(("${#label}" + 2))
+        limit=$((row == 0 ? first_width : second_width))
+        if (( used > 0 && used + length > limit )); then
+            row=1
+            used=0
+        fi
+        used=$((used + length))
+    done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}')
+    printf '%s\n' "$((row + 1))"
+    exit 0
+fi
+
+# Query the theme once; use tmux format expansion to resolve custom colors.
+IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg <<< "$(
+    tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}'
+)"
+active_fg=${active_fg:-white}
+active_bg=${active_bg:-black}
+inactive_fg=${inactive_fg:-black}
+inactive_bg=${inactive_bg:-white}
+
+row=0
+used=0
+while IFS=$'\t' read -r label active; do
+    [[ -n $label ]] || continue
+    entry=" $label "
+    length=${#entry}
+    limit=$((row == 0 ? first_width : second_width))
+
+    if (( used > 0 && used + length > limit )); then
+        row=$((row + 1))
+        used=0
+    fi
+    (( row > 1 )) && break
+
+    if (( row == requested_row )); then
+        if [[ $active == 1 ]]; then
+            printf '#[fg=%s,bg=%s]%s' "$active_fg" "$active_bg" "$entry"
+        else
+            printf '#[fg=%s,bg=%s]%s' "$inactive_fg" "$inactive_bg" "$entry"
+        fi
+    fi
+    used=$((used + length))
+done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}')
+
+printf '#[default]'
