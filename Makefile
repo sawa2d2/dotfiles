@@ -28,7 +28,7 @@ test-vim:
 	@if command -v nvim >/dev/null 2>&1; then \
 		nvim --headless -u NONE -i NONE \
 			-c 'set runtimepath+=./config.d/nvim' \
-			-c 'source .vimrc' -c 'call DotfilesTabline()' -c 'qa!'; \
+			-c 'source .vimrc' -c 'call DotfilesTabline()' -c 'qa!' || exit 1; \
 	else echo 'SKIP Neovim smoke test (nvim unavailable)'; fi
 
 test-lua:
