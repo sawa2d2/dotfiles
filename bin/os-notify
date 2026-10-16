@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( $# < 1 || $# > 2 )); then
+    echo 'Usage: os-notify TITLE [MESSAGE]' >&2
+    exit 2
+fi
+
+title=$1
+message=${2:-}
+
+case $(uname -s) in
+    Linux)
+        command -v notify-send >/dev/null || { echo 'notify-send is required' >&2; exit 1; }
+        notify-send "$title" "$message"
+        ;;
+    Darwin)
+        command -v osascript >/dev/null || { echo 'osascript is required' >&2; exit 1; }
+        osascript - "$title" "$message" <<'APPLESCRIPT'
+on run argv
+    display notification (item 2 of argv) with title (item 1 of argv)
+end run
+APPLESCRIPT
+        ;;
+    *)
+        echo 'Unsupported operating system' >&2
+        exit 1
+        ;;
+esac
