@@ -48,6 +48,21 @@ vim.lsp.config("pyright", {
 vim.lsp.enable("pyright")
 
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+-- Show LSP documentation after the cursor remains idle in normal mode.
+vim.opt.updatetime = 700
+vim.api.nvim_create_autocmd("CursorHold", {
+  group = vim.api.nvim_create_augroup("dotfiles_lsp_hover", { clear = true }),
+  callback = function(args)
+    if vim.bo[args.buf].buftype ~= "" then
+      return
+    end
+    if #vim.lsp.get_clients({ bufnr = args.buf, method = "textDocument/hover" }) == 0 then
+      return
+    end
+    vim.lsp.buf.hover({ focusable = false })
+  end,
+})
+
 
 vim.diagnostic.config({
   underline = true,
