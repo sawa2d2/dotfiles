@@ -26,13 +26,8 @@
         else value;
       username = requireEnv "HOME_MANAGER_USER";
       homeDirectory = requireEnv "HOME_MANAGER_HOME";
-      extraModule = builtins.getEnv "HOME_MANAGER_EXTRA_MODULE";
       mkHome = system: home-manager.lib.homeManagerConfiguration {
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfreePredicate = pkg:
-            nixpkgs.lib.getName pkg == builtins.getEnv "HOME_MANAGER_ALLOW_UNFREE";
-        };
+        pkgs = nixpkgs.legacyPackages.${system};
         extraSpecialArgs = { inherit fzf-git molokai; };
         modules = [
           ./home.nix
@@ -40,7 +35,7 @@
             home.username = username;
             home.homeDirectory = homeDirectory;
           }
-        ] ++ nixpkgs.lib.optional (extraModule != "") (builtins.toPath extraModule);
+        ];
       };
     in {
       homeConfigurations = {
