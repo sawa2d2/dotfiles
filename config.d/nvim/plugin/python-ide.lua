@@ -49,10 +49,6 @@ vim.lsp.enable("pyright")
 
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
 -- Use a blank one-cell border as padding around hover documentation.
--- NormalFloat also colors other floating windows.
-local hover_bg = "#555555"
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = hover_bg })
-vim.api.nvim_set_hl(0, "DotfilesHoverPadding", { fg = hover_bg, bg = hover_bg })
 local hover_border = {
   { " ", "DotfilesHoverPadding" },
   { " ", "DotfilesHoverPadding" },
