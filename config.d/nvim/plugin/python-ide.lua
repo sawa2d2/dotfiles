@@ -48,6 +48,22 @@ vim.lsp.config("pyright", {
 vim.lsp.enable("pyright")
 
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+-- Use a blank one-cell border as padding around hover documentation.
+-- NormalFloat also colors other floating windows.
+local hover_bg = "#555555"
+vim.api.nvim_set_hl(0, "NormalFloat", { bg = hover_bg })
+vim.api.nvim_set_hl(0, "DotfilesHoverPadding", { fg = hover_bg, bg = hover_bg })
+local hover_border = {
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+  { " ", "DotfilesHoverPadding" },
+}
+
 -- Show LSP documentation after the cursor remains idle in normal mode.
 vim.opt.updatetime = 700
 vim.api.nvim_create_autocmd("CursorHold", {
@@ -59,7 +75,7 @@ vim.api.nvim_create_autocmd("CursorHold", {
     if #vim.lsp.get_clients({ bufnr = args.buf, method = "textDocument/hover" }) == 0 then
       return
     end
-    vim.lsp.buf.hover({ focusable = false })
+    vim.lsp.buf.hover({ focusable = false, border = hover_border })
   end,
 })
 
