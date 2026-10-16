@@ -20,6 +20,7 @@
     gnumake
     ruff
     pyright
+    claude-agent-acp
   ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
     blesh
   ];
