@@ -27,7 +27,11 @@
       username = requireEnv "HOME_MANAGER_USER";
       homeDirectory = requireEnv "HOME_MANAGER_HOME";
       mkHome = system: home-manager.lib.homeManagerConfiguration {
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate = pkg:
+            builtins.elem (nixpkgs.lib.getName pkg) [ "claude-code" ];
+        };
         extraSpecialArgs = { inherit fzf-git molokai; };
         modules = [
           ./home.nix
