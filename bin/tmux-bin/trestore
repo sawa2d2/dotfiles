@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+action=restore
+if [[ ${1:-} == --info ]]; then
+  action=info
+  shift
+fi
+exec python3 "$(dirname "$(realpath "$0")")/../tmux-session" "$action" "$@"
