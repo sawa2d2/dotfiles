@@ -95,20 +95,7 @@ function! DotfilesStatusline() abort
     let l:base = l:active ? 'StatusLine' : 'StatusLineNC'
 
     if l:active
-        let l:mode = mode(1)
-        if l:mode =~# '^i'
-            let l:name = 'INSERT'
-        elseif l:mode =~# '^[vV\x16]'
-            let l:name = 'VISUAL'
-        elseif l:mode =~# '^R'
-            let l:name = 'REPLACE'
-        elseif l:mode =~# '^c'
-            let l:name = 'COMMAND'
-        else
-            let l:name = 'NORMAL'
-        endif
-        let l:line = '%#DotStatusMode# ' . l:name . ' '
-        let l:line .= '%#DotStatusFile# %t %m%r '
+        let l:line = '%#DotStatusFile# %t %m%r '
     else
         let l:line = '%#StatusLineNC# %t %m%r '
     endif
