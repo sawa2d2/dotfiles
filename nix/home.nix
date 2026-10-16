@@ -35,6 +35,7 @@
   home.file.".local/share/nvim/site/pack/dotfiles/start/nui-nvim".source = pkgs.vimPlugins.nui-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/gitsigns-nvim".source = pkgs.vimPlugins.gitsigns-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/vim-illuminate".source = pkgs.vimPlugins.vim-illuminate;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/codecompanion-nvim".source = pkgs.vimPlugins.codecompanion-nvim;
 
   # Zsh plugins, sourced from stable Home Manager-managed paths.
   home.file.".local/share/zsh/plugins/zsh-autosuggestions".source = "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions";
