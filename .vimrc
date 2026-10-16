@@ -109,7 +109,19 @@ endfunction
 let [s:project_root, s:project_is_git] = s:ProjectContext()
 let s:session_dir = expand('~/.local/state/dotfiles/vim-sessions')
 let s:editor = has('nvim') ? 'nvim' : 'vim'
-let s:project_session = s:session_dir . '/' . s:editor . '-' . sha256(s:project_root) . '.vim'
+let s:session_key = s:project_root
+if s:project_is_git
+    " Keep sessions separate when switching branches in the same worktree.
+    let s:branch = systemlist('git -C ' . shellescape(s:project_root) . ' symbolic-ref --quiet HEAD 2>/dev/null')
+    if v:shell_error != 0 || empty(s:branch)
+        " Detached HEAD: identify the checked-out commit instead.
+        let s:branch = systemlist('git -C ' . shellescape(s:project_root) . ' rev-parse HEAD 2>/dev/null')
+    endif
+    if !empty(s:branch)
+        let s:session_key .= "\n" . s:branch[0]
+    endif
+endif
+let s:project_session = s:session_dir . '/' . s:editor . '-' . sha256(s:session_key) . '.vim'
 
 function! s:RestoreProjectSession() abort
     " Manually loaded sessions take precedence.
