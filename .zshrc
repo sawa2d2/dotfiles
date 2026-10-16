@@ -57,6 +57,9 @@ fi
 
 [[ -t 0 ]] && command -v stty >/dev/null 2>&1 && stty werase undef
 
+# Shared secret loader (also loaded automatically by Bash from .bash.d)
+[[ -f "$DOTPATH/.bash.d/secret.bash" ]] && source "$DOTPATH/.bash.d/secret.bash"
+
 # Zsh extensions and widgets
 for file in "$HOME"/.zsh.d/*.zsh(N); do
     source "$file"
