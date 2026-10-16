@@ -60,6 +60,43 @@ local hover_border = {
   { " ", "DotfilesHoverPadding" },
 }
 
+-- Give markdown hover floats a light-background palette without changing the
+-- syntax highlights used by regular editing windows.
+local hover_hl_ns = vim.api.nvim_create_namespace("dotfiles_hover_colors")
+local hover_fg = vim.api.nvim_get_hl(0, { name = "NormalFloat", link = false }).fg
+local hover_bg = vim.api.nvim_get_hl(0, { name = "NormalFloat", link = false }).bg
+local hover_accent = vim.api.nvim_get_hl(0, { name = "DotStatusMeta", link = false }).fg
+if hover_fg and hover_bg then
+  for _, group in ipairs({
+    "@variable", "@variable.python", "@lsp.type.variable", "@lsp.type.parameter",
+    "@type", "@type.python", "@lsp.type.type", "@lsp.type.class",
+    "@function", "@function.python", "@lsp.type.function", "@lsp.type.method",
+    "@string", "@string.python", "@keyword", "@keyword.python",
+    "@markup.raw", "@markup.raw.block", "@markup.raw.markdown_inline",
+    "Identifier", "Type", "Function", "String", "Statement",
+    "markdownCode", "markdownCodeBlock", "markdownInlineCode",
+  }) do
+    vim.api.nvim_set_hl(hover_hl_ns, group, { fg = hover_fg, bg = hover_bg })
+  end
+end
+
+vim.api.nvim_create_autocmd("WinNew", {
+  group = vim.api.nvim_create_augroup("dotfiles_hover_colors", { clear = true }),
+  callback = function(args)
+    vim.schedule(function()
+      local win = tonumber(args.match)
+      if not win or not vim.api.nvim_win_is_valid(win) then
+        return
+      end
+      local config = vim.api.nvim_win_get_config(win)
+      local buf = vim.api.nvim_win_get_buf(win)
+      if config.relative ~= "" and vim.bo[buf].filetype == "markdown" then
+        vim.api.nvim_win_set_hl_ns(win, hover_hl_ns)
+      end
+    end)
+  end,
+})
+
 -- Show LSP documentation after the cursor remains idle in normal mode.
 vim.opt.updatetime = 700
 vim.api.nvim_create_autocmd("CursorHold", {
