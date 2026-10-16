@@ -12,12 +12,20 @@ if [[ ${1:-} == --sync && $# == 1 ]]; then
         current=$(tmux show-options -v -t "$session" status 2>/dev/null) || continue
         # Store rendered rows synchronously; tmux status #() is asynchronous
         # and may not have a usable result when the status is redrawn.
-        tmux set-option -t "$session" @tmux_window_row0 "$("$0" 0 "$session" "$width")"
-        tmux set-option -t "$session" @tmux_window_row1 "$("$0" 1 "$session" "$width")"
+        row0=$("$0" 0 "$session" "$width" 2>/dev/null) || continue
+        row1=$("$0" 1 "$session" "$width" 2>/dev/null) || continue
+        # Restore may delete a session between list-clients and set-option.
+        # Ignore only vanished sessions; preserve failures on live sessions.
+        tmux set-option -t "$session" @tmux_window_row0 "$row0" 2>/dev/null ||
+            { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
+        tmux set-option -t "$session" @tmux_window_row1 "$row1" 2>/dev/null ||
+            { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
         target=$rows
         [[ $rows == 1 ]] && target=on
-        [[ $current == "$target" ]] ||
-            tmux set-option -t "$session" status "$target"
+        if [[ $current != "$target" ]]; then
+            tmux set-option -t "$session" status "$target" 2>/dev/null ||
+                { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
+        fi
     done < <(
         tmux list-clients -F '#{session_id}	#{client_width}' |
             awk -F '\t' '$2 ~ /^[0-9]+$/ && $1 != "" {
