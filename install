@@ -8,7 +8,7 @@ cd "$DOTPATH"
 
 if [[ ${1:-} == --system ]]; then
     shift
-    source "$DOTPATH/install-dotfiles-bin.sh"
+    source "$DOTPATH/install-dotfiles-bin-system-wide"
     install_system_bin "$@"
     exit
 fi
