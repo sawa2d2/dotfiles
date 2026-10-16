@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Install Neovim plugins without Nix or a plugin manager.
+# Re-running is safe: existing plugin directories and symlinks are preserved.
+plugin_dir="${HOME:?}/.local/share/nvim/site/pack/dotfiles/start"
+
+command -v git >/dev/null 2>&1 || { echo 'git is required' >&2; exit 1; }
+
+if ! command -v rg >/dev/null 2>&1; then
+  if [[ $(uname -s) == Darwin ]] && command -v brew >/dev/null 2>&1; then
+    brew install ripgrep
+  else
+    echo 'WARNING: ripgrep (rg) is missing; Telescope file search may not work.' >&2
+  fi
+fi
+
+mkdir -p "$plugin_dir"
+
+install_plugin() {
+  local repository=$1 name=$2 branch=${3:-} dest
+  dest="$plugin_dir/$name"
+
+  if [[ -d "$dest" || -L "$dest" ]]; then
+    printf 'Already present: %s\n' "$dest"
+    return
+  fi
+  if [[ -e "$dest" ]]; then
+    printf 'Cannot install plugin over existing file: %s\n' "$dest" >&2
+    return 1
+  fi
+
+  if [[ -n "$branch" ]]; then
+    git clone --depth 1 --branch "$branch" "https://github.com/$repository.git" "$dest"
+  else
+    git clone --depth 1 "https://github.com/$repository.git" "$dest"
+  fi
+}
+
+for plugin in nvim-cmp cmp-nvim-lsp cmp-buffer cmp-path; do
+  install_plugin "hrsh7th/$plugin" "$plugin"
+done
+
+install_plugin nvim-lua/plenary.nvim plenary-nvim
+install_plugin nvim-telescope/telescope.nvim telescope-nvim
+install_plugin nvim-neo-tree/neo-tree.nvim neo-tree-nvim v3.x
+install_plugin MunifTanjim/nui.nvim nui-nvim
+install_plugin lewis6991/gitsigns.nvim gitsigns-nvim
+install_plugin RRethy/vim-illuminate vim-illuminate
+
+echo 'Neovim plugins installed. Restart Neovim to load them.'
