@@ -64,6 +64,19 @@ cat > "$ROOT/.vim.theme.vim" <<VIM
 if has('termguicolors')
   set termguicolors
 endif
+highlight DotCmpNormal guifg=$COLOR_FG guibg=$COLOR_INACTIVE
+highlight DotCmpSelected guifg=$COLOR_FG guibg=$COLOR_SELECTED gui=bold
+highlight Pmenu guifg=$COLOR_FG guibg=$COLOR_INACTIVE
+highlight PmenuSel guifg=$COLOR_FG guibg=$COLOR_SELECTED gui=bold
+highlight PmenuSbar guibg=$COLOR_INACTIVE
+highlight PmenuThumb guibg=$COLOR_ACTIVE
+highlight CmpItemAbbr guifg=$COLOR_FG guibg=NONE
+highlight CmpItemAbbrMatch guifg=$COLOR_PREFIX guibg=NONE gui=bold
+highlight CmpItemAbbrMatchFuzzy guifg=$COLOR_PREFIX guibg=NONE gui=bold
+highlight CmpItemKind guifg=$COLOR_PREFIX guibg=NONE gui=bold
+highlight CmpItemMenu guifg=$COLOR_ACTIVE guibg=NONE
+highlight NormalFloat guifg=$COLOR_FG guibg=$COLOR_INACTIVE
+highlight DotfilesHoverPadding guifg=$COLOR_INACTIVE guibg=$COLOR_INACTIVE
 highlight StatusLine guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE
 highlight StatusLineNC guifg=$COLOR_FG guibg=$COLOR_INACTIVE
 highlight DotStatusMode guifg=$COLOR_FG guibg=$COLOR_ACCENT gui=bold
