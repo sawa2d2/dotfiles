@@ -88,6 +88,69 @@ augroup dotfiles_git_branch
     autocmd VimEnter,BufEnter,DirChanged,FocusGained * call <SID>UpdateGitBranch()
 augroup END
 
+" Automatically restore and save one editing session per project/directory.
+" Store sessions outside the repository and keep Vim/Neovim sessions separate.
+" Capture the startup file before a session changes the argument list or directory.
+let s:startup_file = argc() == 1 && !isdirectory(argv(0)) ? fnamemodify(argv(0), ':p') : ''
+
+function! s:ProjectContext() abort
+    " Prefer the explicitly opened file's Git worktree, even when launched elsewhere.
+    let l:root = empty(s:startup_file) ? getcwd() : fnamemodify(s:startup_file, ':h')
+    let l:root = resolve(l:root)
+    if executable('git')
+        let l:roots = systemlist('git -C ' . shellescape(l:root) . ' rev-parse --show-toplevel 2>/dev/null')
+        if v:shell_error == 0 && !empty(l:roots)
+            return [resolve(l:roots[0]), 1]
+        endif
+    endif
+    return [l:root, 0]
+endfunction
+
+let [s:project_root, s:project_is_git] = s:ProjectContext()
+let s:session_dir = expand('~/.local/state/dotfiles/vim-sessions')
+let s:editor = has('nvim') ? 'nvim' : 'vim'
+let s:project_session = s:session_dir . '/' . s:editor . '-' . sha256(s:project_root) . '.vim'
+
+function! s:RestoreProjectSession() abort
+    " Manually loaded sessions take precedence.
+    if !empty(v:this_session)
+        return
+    endif
+    " Use the repository root as cwd, regardless of the startup subdirectory.
+    if s:project_is_git
+        execute 'cd ' . fnameescape(s:project_root)
+    endif
+    if filereadable(s:project_session)
+        execute 'silent source ' . fnameescape(s:project_session)
+        " An older saved session may change cwd; normalize it again.
+        if s:project_is_git
+            execute 'cd ' . fnameescape(s:project_root)
+        endif
+        " Open an explicit startup file in a new tab, preserving the restored layout.
+        if !empty(s:startup_file)
+            execute 'tabedit ' . fnameescape(s:startup_file)
+        endif
+    endif
+endfunction
+
+function! s:SaveProjectSession() abort
+    call mkdir(fnamemodify(s:project_session, ':h'), 'p')
+    " Do not snapshot editor-specific settings or live terminal processes.
+    let l:options = &sessionoptions
+    try
+        set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize
+        execute 'silent mksession! ' . fnameescape(s:project_session)
+    finally
+        let &sessionoptions = l:options
+    endtry
+endfunction
+
+augroup dotfiles_project_session
+    autocmd!
+    autocmd VimEnter * call <SID>RestoreProjectSession()
+    autocmd VimLeavePre * call <SID>SaveProjectSession()
+augroup END
+
 " Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
 function! DotfilesStatusline() abort
     let l:window = get(g:, 'statusline_winid', win_getid())
@@ -183,6 +246,9 @@ nnoremap <silent> <M-j> :call DotfilesMoveSplitBorder('j')<CR>
 nnoremap <silent> <M-k> :call DotfilesMoveSplitBorder('k')<CR>
 nnoremap <silent> <M-l> :call DotfilesMoveSplitBorder('l')<CR>
 imap <C-c> <Esc>
+
+" Quit all tabs with two consecutive Ctrl+Q presses (honors unsaved changes).
+nnoremap <silent> <C-q><C-q> :qa<CR>
 
 "tab
 nmap <S-L> gt

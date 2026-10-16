@@ -21,6 +21,24 @@ Existing settings are **replaced**, not merged; review the backup to retain any
 personal preferences. Re-running `./install` updates an existing symlink without
 creating another backup.
 
+## Vim / Neovim project sessions
+
+Vim and Neovim automatically restore the previous session for the current
+Git worktree or, outside Git, the current directory. Starting with an explicit
+file (such as `vim main.py`) restores the same session, then opens that file\nin a new tab while preserving the restored layout.
+The Git worktree is determined from the file path when supplied, even if Vim
+was launched outside the repository. On exit, sessions save open files, tabs,
+split windows, and editing positions.
+
+Sessions live in `~/.local/state/dotfiles/vim-sessions/`, not in the project.
+Vim and Neovim use separate session files. Different directories outside Git
+have independent sessions; directories within one Git worktree share a session.
+Inside Git, Vim changes its working directory to the worktree root on startup,
+even when launched from a subdirectory or with a file path. Session restoration
+cannot override that root directory.
+Unsaved buffer contents and running terminal processes are **not** preserved;
+save your files before quitting.
+
 ## Installing dependencies
 
 ### Nix installation
