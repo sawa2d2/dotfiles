@@ -152,6 +152,14 @@ function! s:RestoreProjectSession() abort
                 execute 'tabedit ' . fnameescape(s:startup_file)
             endif
         endif
+
+        " Close only an untouched single-window blank first tab.
+        if tabpagenr("$") > 1 && tabpagewinnr(1, "$") == 1
+            let l:first_buffer = tabpagebuflist(1)[0]
+            if empty(bufname(l:first_buffer)) && !getbufvar(l:first_buffer, "&modified") && getbufvar(l:first_buffer, "&buftype") ==# ""
+                1tabclose
+            endif
+        endif
     endif
 endfunction
 
