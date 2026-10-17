@@ -26,7 +26,7 @@ fi
 export MAGICK=convert
 
 # Resolve dotfiles root
-export DOTPATH="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+export DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 
 # Load private configuration
 [[ -f "$DOTPATH/private.d/init.sh" ]] &&

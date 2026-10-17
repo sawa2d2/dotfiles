@@ -2,7 +2,9 @@
 
 ## Install dotfiles
 
-Run `./install` from the repository root to install the dotfiles.
+The `home/` directory contains dotfiles linked directly into `$HOME`. The repository-level `.editorconfig` stays at the root to configure this repository as well.
+
+Run `./install` from the repository root to install the dotfiles. After switching to this layout from an older checkout, run it immediately to repair symlinks pointing to the previous root paths.
 
 ```bash
 ./install

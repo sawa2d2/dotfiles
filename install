@@ -2,7 +2,6 @@
 set -euo pipefail
 
 DOTPATH=$(cd "$(dirname "$0")" && pwd)
-DEFAULT_SHELL=$(basename "${SHELL:-/bin/sh}")
 
 cd "$DOTPATH"
 
@@ -45,39 +44,30 @@ link() {
 }
 
 # Shared configurations
+link "$DOTPATH/.editorconfig" "$HOME/.editorconfig"
 for f in \
-    .editorconfig \
     .gitconfig \
     .git.d \
+    .x.d \
     .profile_common \
     .tmux.conf \
     .vimrc
 do
-    link "$DOTPATH/$f" "$HOME/$f"
+    link "$DOTPATH/home/$f" "$HOME/$f"
 done
 
-# Shell-specific configurations
-case "$DEFAULT_SHELL" in
-    bash)
-        for f in \
-            .bashrc \
-            .bash_aliases \
-            .bash.d \
-            .blerc \
-            .inputrc
-        do
-            link "$DOTPATH/$f" "$HOME/$f"
-        done
-        ;;
-    zsh)
-        for f in \
-            .zshrc \
-            .zsh.d
-        do
-            link "$DOTPATH/$f" "$HOME/$f"
-        done
-        ;;
-esac
+# Refresh both shells: old symlinks may point to pre-migration paths.
+for f in \
+    .bashrc \
+    .bash_aliases \
+    .bash.d \
+    .blerc \
+    .inputrc \
+    .zshrc \
+    .zsh.d
+do
+    link "$DOTPATH/home/$f" "$HOME/$f"
+done
 
 # Executables
 link "$DOTPATH/bin" "$HOME/bin"

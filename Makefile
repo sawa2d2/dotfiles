@@ -1,8 +1,8 @@
 .PHONY: fmt fmt-check lint check
 
-BASH_CONFIG := .bashrc .bash_aliases $(wildcard .bash.d/*.bash)
-FMT_CONFIG := $(filter-out .bash.d/path.bash,$(BASH_CONFIG))
-ZSH_CONFIG := .zshrc $(wildcard .zsh.d/*.zsh)
+BASH_CONFIG := home/.bashrc home/.bash_aliases $(wildcard home/.bash.d/*.bash)
+FMT_CONFIG := $(filter-out home/.bash.d/path.bash,$(BASH_CONFIG))
+ZSH_CONFIG := home/.zshrc $(wildcard home/.zsh.d/*.zsh)
 
 fmt:
 	shfmt -w bin $(FMT_CONFIG)

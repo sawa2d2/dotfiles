@@ -22,15 +22,15 @@ bindkey '^A' beginning-of-line
 bindkey '^E' end-of-line
 
 # Resolve dotfiles root
-export DOTPATH="$(dirname "$(realpath "${(%):-%x}")")"
+export DOTPATH="$(dirname "$(dirname "$(realpath "${(%):-%x}")")")"
 
 # Load private configuration
 [[ -f "$DOTPATH/private.d/init.sh" ]] &&
     source "$DOTPATH/private.d/init.sh"
 
 # Shared PATH configuration
-[[ -f "$DOTPATH/.bash.d/path.bash" ]] &&
-    source "$DOTPATH/.bash.d/path.bash"
+[[ -f "$DOTPATH/home/.bash.d/path.bash" ]] &&
+    source "$DOTPATH/home/.bash.d/path.bash"
 
 # Allow comments in interactive commands (including pasted snippets).
 setopt INTERACTIVE_COMMENTS
@@ -58,7 +58,7 @@ fi
 [[ -t 0 ]] && command -v stty >/dev/null 2>&1 && stty werase undef
 
 # Shared secret loader (also loaded automatically by Bash from .bash.d)
-[[ -f "$DOTPATH/.bash.d/secret.bash" ]] && source "$DOTPATH/.bash.d/secret.bash"
+[[ -f "$DOTPATH/home/.bash.d/secret.bash" ]] && source "$DOTPATH/home/.bash.d/secret.bash"
 
 # Zsh extensions and widgets
 for file in "$HOME"/.zsh.d/*.zsh(N); do
@@ -66,7 +66,7 @@ for file in "$HOME"/.zsh.d/*.zsh(N); do
 done
 
 # User aliases
-[[ -f "$DOTPATH/.bash_aliases" ]] && source "$DOTPATH/.bash_aliases"
+[[ -f "$DOTPATH/home/.bash_aliases" ]] && source "$DOTPATH/home/.bash_aliases"
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
 
 # Prefer Nix-managed Zsh plugins, with Homebrew as a fallback.
