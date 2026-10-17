@@ -86,7 +86,6 @@ function M.setup()
   persistence.setup({
     dir = vim.fn.stdpath("state") .. "/dotfiles-persistence/",
     branch = false,
-    need = 1,
   })
 
   vim.api.nvim_create_autocmd("VimEnter", {
