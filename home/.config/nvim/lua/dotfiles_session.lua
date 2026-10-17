@@ -9,7 +9,7 @@ local function git_root(path)
   return vim.fn.resolve(path)
 end
 
-local function focus_file(target)
+local function focus_file(target, first)
   local resolved = vim.fn.resolve(target)
   for tab = 1, vim.fn.tabpagenr("$") do
     local buffers = vim.fn.tabpagebuflist(tab)
@@ -22,7 +22,11 @@ local function focus_file(target)
       end
     end
   end
-  vim.cmd("tabedit " .. vim.fn.fnameescape(target))
+  if first then
+    vim.cmd("tabedit " .. vim.fn.fnameescape(target))
+  else
+    vim.cmd("vsplit " .. vim.fn.fnameescape(target))
+  end
 end
 
 -- Session files can restore buffers after filetype detection has run.
@@ -104,9 +108,8 @@ function M.setup()
       -- With no saved session, preserve the editor's native -O layout.
       -- Otherwise restore the shared session and expose explicit files.
       if saved_session and first_file then
-        focus_file(first_file)
-        for i = 2, #startup_files do
-          vim.cmd("vsplit " .. vim.fn.fnameescape(startup_files[i]))
+        for i, file in ipairs(startup_files) do
+          focus_file(file, i == 1)
         end
       end
       close_empty_first_tab()
