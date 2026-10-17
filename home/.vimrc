@@ -29,7 +29,7 @@ set showtabline=2
 
 " Show only file names in tabs, avoiding abbreviated parent paths.
 function! DotfilesTabline() abort
-    let l:line = ''
+    let l:line = '%#TabLineFill#    '
     for l:tab in range(1, tabpagenr("$"))
         let l:buffers = tabpagebuflist(l:tab)
         let l:buffer = get(l:buffers, tabpagewinnr(l:tab) - 1, -1)
