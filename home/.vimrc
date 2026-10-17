@@ -157,7 +157,7 @@ function! s:SaveProjectSession() abort
     " Do not snapshot editor-specific settings or live terminal processes.
     let l:options = &sessionoptions
     try
-        set sessionoptions=blank,buffers,curdir,folds,help,tabpages,winsize
+        set sessionoptions=blank,curdir,folds,help,tabpages,winsize
         execute 'silent mksession! ' . fnameescape(s:project_session)
     finally
         let &sessionoptions = l:options
