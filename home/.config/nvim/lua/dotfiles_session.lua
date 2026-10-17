@@ -98,11 +98,20 @@ function M.setup()
   local root = git_root(base)
 
   vim.opt.sessionoptions = { "curdir", "folds", "help", "tabpages", "winsize" }
-  -- persistence.nvim derives the session filename from cwd on save.
-  -- Register this before setup() so it runs before its VimLeavePre handler.
+  -- Explicit Ctrl-Q Ctrl-Q keeps the session; ordinary :q/:qa discards it.
+  -- This must run before persistence.nvim's VimLeavePre save handler.
+  local keep_session = false
+  local manage_session = true
   vim.api.nvim_create_autocmd("VimLeavePre", {
     callback = function()
+      if not manage_session then
+        return
+      end
       vim.cmd.cd(vim.fn.fnameescape(root))
+      if not keep_session then
+        persistence.stop()
+        vim.fn.delete(persistence.current())
+      end
     end,
   })
 
@@ -110,6 +119,15 @@ function M.setup()
     dir = vim.fn.stdpath("state") .. "/dotfiles-persistence/",
     branch = false,
   })
+
+  vim.keymap.set("n", "<C-q><C-q>", function()
+    keep_session = true
+    local ok, err = pcall(vim.cmd, "qa")
+    if not ok then
+      keep_session = false
+      vim.notify(err, vim.log.levels.ERROR)
+    end
+  end, { silent = true, desc = "Save session and quit all" })
 
   vim.api.nvim_create_autocmd("User", {
     pattern = "PersistenceSavePost",
@@ -122,6 +140,7 @@ function M.setup()
     once = true,
     callback = function()
       if vim.v.this_session ~= "" then
+        manage_session = false
         persistence.stop()
         return
       end
