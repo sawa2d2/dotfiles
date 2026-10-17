@@ -115,7 +115,7 @@ function! DotfilesMoveToTab(name) abort
     let l:buffer = bufnr('%')
     execute 'tabnext ' . l:matches[0]
     try
-        execute 'sbuffer ' . l:buffer
+        execute 'rightbelow vertical sbuffer ' . l:buffer
     catch
         call win_gotoid(l:source_window)
         echoerr 'MoveToTab: failed to open buffer: ' . v:exception
