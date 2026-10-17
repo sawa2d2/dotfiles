@@ -89,6 +89,49 @@ function! DotfilesPromptRenameTab() abort
 endfunction
 nnoremap <silent> <leader>, :call DotfilesPromptRenameTab()<CR>
 
+" Move the selected window's buffer to a new split in an existing named tab.
+" The original buffer, including unsaved edits, stays loaded.
+function! DotfilesMoveToTab(name) abort
+    let l:matches = []
+    for l:tab in range(1, tabpagenr('$'))
+        if gettabvar(l:tab, 'dotfiles_tab_name', '') ==# a:name
+            call add(l:matches, l:tab)
+        endif
+    endfor
+    if len(l:matches) != 1
+        echoerr len(l:matches) == 0 ? 'MoveToTab: tab not found: ' . a:name : 'MoveToTab: ambiguous tab name: ' . a:name
+        return
+    endif
+    if l:matches[0] == tabpagenr()
+        echoerr 'MoveToTab: destination is the current tab'
+        return
+    endif
+    if &buftype !=# ''
+        echoerr 'MoveToTab: special buffers are not supported'
+        return
+    endif
+
+    let l:source_window = win_getid()
+    let l:buffer = bufnr('%')
+    execute 'tabnext ' . l:matches[0]
+    try
+        execute 'sbuffer ' . l:buffer
+    catch
+        call win_gotoid(l:source_window)
+        echoerr 'MoveToTab: failed to open buffer: ' . v:exception
+        return
+    endtry
+    let l:target_window = win_getid()
+    if !win_gotoid(l:source_window)
+        echoerr 'MoveToTab: source window disappeared'
+        return
+    endif
+    close
+    call win_gotoid(l:target_window)
+endfunction
+command! -nargs=+ MoveToTab call DotfilesMoveToTab(<q-args>)
+nnoremap <leader>. :MoveToTab<Space>
+
 " Update unsaved markers on tab titles as buffer contents change.
 augroup dotfiles_tabline_modified
     autocmd!
