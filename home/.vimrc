@@ -126,9 +126,28 @@ function! s:RestoreProjectSession() abort
         if s:project_is_git
             execute 'cd ' . fnameescape(s:project_root)
         endif
-        " Open an explicit startup file in a new tab, preserving the restored layout.
+        " Reuse an existing restored window for the requested startup file.
         if !empty(s:startup_file)
-            execute 'tabedit ' . fnameescape(s:startup_file)
+            let l:target = resolve(s:startup_file)
+            let l:found = 0
+            for l:tab in range(1, tabpagenr('$'))
+                let l:buffers = tabpagebuflist(l:tab)
+                for l:win in range(1, len(l:buffers))
+                    let l:name = bufname(l:buffers[l:win - 1])
+                    if !empty(l:name) && resolve(fnamemodify(l:name, ':p')) ==# l:target
+                        execute 'tabnext ' . l:tab
+                        execute l:win . 'wincmd w'
+                        let l:found = 1
+                        break
+                    endif
+                endfor
+                if l:found
+                    break
+                endif
+            endfor
+            if !l:found
+                execute 'tabedit ' . fnameescape(s:startup_file)
+            endif
         endif
     endif
 endfunction
