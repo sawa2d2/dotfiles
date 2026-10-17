@@ -76,9 +76,9 @@ highlight CmpItemAbbrMatchFuzzy guifg=$COLOR_PREFIX guibg=NONE gui=bold
 highlight CmpItemKind guifg=$COLOR_PREFIX guibg=NONE gui=bold
 highlight CmpItemMenu guifg=$COLOR_ACTIVE guibg=NONE
 highlight NormalFloat guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight LineNr guifg=#222222 guibg=#777b7e ctermfg=235 ctermbg=243
-highlight CursorLineNr guifg=#111111 guibg=#777b7e ctermfg=233 ctermbg=243
-highlight SignColumn guibg=#777b7e ctermbg=243
+highlight LineNr guifg=#bcbcbc guibg=#393939 ctermfg=250 ctermbg=237
+highlight CursorLineNr guifg=#ffffff guibg=#393939 ctermfg=15 ctermbg=237
+highlight SignColumn guibg=#393939 ctermbg=237
 highlight DotfilesHoverPadding guifg=$COLOR_INACTIVE guibg=$COLOR_INACTIVE
 highlight StatusLine guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE
 highlight StatusLineNC guifg=$COLOR_FG guibg=$COLOR_INACTIVE

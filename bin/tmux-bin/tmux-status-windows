@@ -100,9 +100,9 @@ while IFS=$'\t' read -r label active; do
             printf '#[bg=%s] ' "$bar_bg"
         fi
         if [[ $active == 1 ]]; then
-            printf '#[fg=%s,bg=%s]%s' "$active_fg" "$active_bg" "$entry"
+            printf '#[fg=%s,bg=%s,bold]%s' "$active_fg" "$active_bg" "$entry"
         else
-            printf '#[fg=%s,bg=%s]%s' "$inactive_fg" "$inactive_bg" "$entry"
+            printf '#[fg=%s,bg=%s,nobold]%s' "$inactive_fg" "$inactive_bg" "$entry"
         fi
     fi
     used=$((used + length))

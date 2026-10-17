@@ -174,15 +174,46 @@ augroup dotfiles_project_session
 augroup END
 
 " Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
+" Display paths relative to their Git root; otherwise use absolute paths.
+" Cache per buffer to avoid launching Git on every statusline redraw.
+function! DotfilesStatusPath(buffer) abort
+    let l:name = bufname(a:buffer)
+    if empty(l:name)
+        return '[No Name]'
+    endif
+    if getbufvar(a:buffer, '&buftype') !=# ''
+        return substitute(l:name, '%', '%%', 'g')
+    endif
+    let l:file = fnamemodify(l:name, ':p')
+    let l:cached = getbufvar(a:buffer, 'dotfiles_status_path_cache', {})
+    if get(l:cached, 'file', '') !=# l:file
+        let l:display = l:file
+        if executable('git')
+            let l:root = systemlist('git -C ' . shellescape(fnamemodify(l:file, ':h')) . ' rev-parse --show-toplevel 2>/dev/null')
+            if v:shell_error == 0 && !empty(l:root)
+                let l:root_path = resolve(l:root[0])
+                let l:resolved_file = resolve(l:file)
+                if stridx(l:resolved_file, l:root_path . '/') == 0
+                    let l:display = strpart(l:resolved_file, strlen(l:root_path) + 1)
+                endif
+            endif
+        endif
+        let l:cached = {'file': l:file, 'display': l:display}
+        call setbufvar(a:buffer, 'dotfiles_status_path_cache', l:cached)
+    endif
+    return substitute(l:cached.display, '%', '%%', 'g')
+endfunction
+
 function! DotfilesStatusline() abort
     let l:window = get(g:, 'statusline_winid', win_getid())
     let l:active = (l:window == win_getid())
     let l:base = l:active ? 'StatusLine' : 'StatusLineNC'
+    let l:path = DotfilesStatusPath(winbufnr(l:window))
 
     if l:active
-        let l:line = '%#DotStatusFile# %t %m%r '
+        let l:line = '%#DotStatusFile# ' . l:path . ' %m%r '
     else
-        let l:line = '%#StatusLineNC# %t %m%r '
+        let l:line = '%#StatusLineNC# ' . l:path . ' %m%r '
     endif
 
     let l:line .= '%#' . l:base . '#%='
