@@ -12,6 +12,11 @@ from urllib.parse import quote
 
 DIR = Path.home() / ".local/state/tmux/sessions"
 
+# Only relaunch explicitly approved interactive applications, without saved argv.
+RESTORABLE_COMMANDS = frozenset({
+    "vi", "vim", "nvim", "bob", "claude", "codex",
+})
+
 def tm(*args):
     p = subprocess.run(["tmux", *map(str, args)], capture_output=True, text=True)
     if p.returncode:
@@ -146,8 +151,8 @@ def info(name):
 def apply(name):
     data = load(name)
     windows = sorted(data["windows"], key=lambda w: w["index"])
-    stage = f"__trestore_{os.getpid()}"
-    previous = f"__trestore_old_{os.getpid()}"
+    stage = f"__tload_{os.getpid()}"
+    previous = f"__tload_old_{os.getpid()}"
     old_id = tm("display-message", "-p", "-t", name, "#{session_id}") if exists(name) else None
     clients = [r[0] for r in records("list-clients", "-t", old_id, fields=("client_tty",))] if old_id else []
     staged = False
@@ -197,14 +202,14 @@ def apply(name):
             active_panes = [p for p in window["panes"] if p.get("active")]
             if active_panes:
                 tm("select-pane", "-t", f"{wid}.{active_panes[0]['index']}")
-        # Resume only editors. Never replay arbitrary saved commands or arguments.
-        # Existing Vim/Neovim startup configuration restores project sessions.
+        # Relaunch only allowlisted interactive commands, never saved arguments.
+        # Vim/Neovim may restore project sessions; AI CLIs start fresh.
         for window in windows:
             target = f"{stage}:{window['index']}"
             wid = tm("display-message", "-p", "-t", target, "#{window_id}")
             for pane in window["panes"]:
                 command = pane.get("command")
-                if command in ("vi", "vim", "nvim"):
+                if command in RESTORABLE_COMMANDS:
                     tm("send-keys", "-t", f"{wid}.{pane['index']}", "-l", command)
                     tm("send-keys", "-t", f"{wid}.{pane['index']}", "Enter")
         selected = [w for w in windows if w.get("active")]
@@ -250,8 +255,9 @@ def main():
     print(f"Restore session {name} saved {data['saved_at']} ({len(data['windows'])} windows)?")
     if exists(name):
         print("WARNING: Existing panes, processes, and unsaved changes will be destroyed.")
-    if any(pane.get("command") in ("vi", "vim", "nvim") for w in data["windows"] for pane in w["panes"]):
-        print("Vim/Neovim will be relaunched in matching panes (unsaved editor data cannot be recovered).")
+    if any(pane.get("command") in RESTORABLE_COMMANDS for w in data["windows"] for pane in w["panes"]):
+        print("Allowlisted interactive commands will be relaunched without saved arguments.")
+        print("Vim/Neovim may restore project sessions; AI CLI sessions will start fresh.")
     if not args.yes and input("Continue? [y/N] ").strip().lower() != "y":
         print("Cancelled.")
         return
