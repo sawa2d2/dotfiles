@@ -13,7 +13,7 @@ cwhich() {
   fi
 
   local target
-  target=$("$DOTPATH/which-basedir" "$1") || return
+  target=$("$DOTPATH/bin/which-basedir" "$1") || return
   cd -- "$target"
 }
 

@@ -12,7 +12,7 @@ Run `./install` from the repository root to install the dotfiles. After switchin
 
 ## VS Code User Settings
 
-`./install` links `config.d/vscode/settings.json` to the VS Code User Settings path:
+`./install` links `home/.config/vscode/settings.json` and `extensions.json` to the VS Code User directory:
 
 - Ubuntu/Linux: `~/.config/Code/User/settings.json`
 - macOS: `~/Library/Application Support/Code/User/settings.json`
@@ -72,3 +72,5 @@ bash ./install-nvim-plugins
 In iTerm2, open **Settings → General → Settings**, enable **Load settings from a custom folder or URL**, and select this repository's `iterm2/` directory. Enable **Save changes to folder when iTerm2 quits** to keep the configuration in sync.
 
 This is configured directly in iTerm2; `./install` is not involved.
+
+Note: VS Code uses `.vscode/extensions.json` for workspace extension recommendations. A file in the User directory is not equivalent and does not automatically install or recommend extensions globally.

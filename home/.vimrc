@@ -4,8 +4,8 @@ if !empty(globpath(&runtimepath, 'colors/molokai.vim'))
 endif
 
 " Apply shared UI colors after Molokai (or any default colorscheme).
-if filereadable(expand('~/.vim.theme.vim'))
-    execute 'source' fnameescape(expand('~/.vim.theme.vim'))
+if filereadable(expand('~/dotfiles/theme/generated/vim.theme.vim'))
+    execute 'source' fnameescape(expand('~/dotfiles/theme/generated/vim.theme.vim'))
 endif
 
 set fenc=utf-8

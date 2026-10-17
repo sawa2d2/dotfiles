@@ -73,56 +73,62 @@ done
 link "$DOTPATH/bin" "$HOME/bin"
 
 # Install application configurations
-if [[ -d "$DOTPATH/config.d" ]]; then
+if [[ -d "$DOTPATH/home/.config" ]]; then
     while IFS= read -r -d '' src; do
-        relative="${src#"$DOTPATH/config.d/"}"
+        relative="${src#"$DOTPATH/home/.config/"}"
         # VS Code has platform-specific User Settings paths.
         [[ "$relative" == vscode/* ]] && continue
         dst="$HOME/.config/$relative"
         mkdir -p "$(dirname "$dst")"
         link "$src" "$dst"
-    done < <(find "$DOTPATH/config.d" -type f -print0)
+    done < <(find "$DOTPATH/home/.config" -type f -print0)
 fi
 
-# VS Code User Settings (replace existing file, preserving a backup).
-vscode_src="$DOTPATH/config.d/vscode/settings.json"
-if [[ -f "$vscode_src" ]]; then
+# VS Code User files (settings and extension recommendations).
+for vscode_file in settings.json extensions.json; do
+    vscode_src="$DOTPATH/home/.config/vscode/$vscode_file"
+    [[ -f "$vscode_src" ]] || continue
     case "$(uname -s)" in
-        Darwin) vscode_dest="$HOME/Library/Application Support/Code/User/settings.json" ;;
-        Linux)  vscode_dest="$HOME/.config/Code/User/settings.json" ;;
-        *)      vscode_dest="" ;;
+        Darwin) vscode_dest="$HOME/Library/Application Support/Code/User/$vscode_file" ;;
+        Linux)  vscode_dest="$HOME/.config/Code/User/$vscode_file" ;;
+        *)      continue ;;
     esac
 
-    if [[ -n "$vscode_dest" ]]; then
-        mkdir -p "$(dirname "$vscode_dest")"
-        if [[ -e "$vscode_dest" && ! -L "$vscode_dest" ]]; then
-            backup="$vscode_dest.backup"
-            backup_num=1
-            while [[ -e "$backup" || -L "$backup" ]]; do
-                backup="$vscode_dest.backup.$backup_num"
-                backup_num=$((backup_num + 1))
-            done
-            mv "$vscode_dest" "$backup"
-            echo "Backup: $backup"
-        fi
-        link "$vscode_src" "$vscode_dest"
+    mkdir -p "$(dirname "$vscode_dest")"
+    if [[ -e "$vscode_dest" && ! -L "$vscode_dest" ]]; then
+        backup="$vscode_dest.backup"
+        backup_num=1
+        while [[ -e "$backup" || -L "$backup" ]]; do
+            backup="$vscode_dest.backup.$backup_num"
+            backup_num=$((backup_num + 1))
+        done
+        mv "$vscode_dest" "$backup"
+        echo "Backup: $vscode_dest"
     fi
-fi
+    link "$vscode_src" "$vscode_dest"
+done
 
 # Generate shared theme
 if [ -x "$DOTPATH/theme/sync" ]; then
     echo "Generate theme configurations"
     "$DOTPATH/theme/sync" teal
 
-    link "$DOTPATH/.tmux.theme.conf" "$HOME/.tmux.theme.conf"
-    link "$DOTPATH/.vim.theme.vim" "$HOME/.vim.theme.vim"
+    # Remove obsolete symlinks from the old theme output locations.
+    for theme_file in .tmux.theme.conf .vim.theme.vim; do
+        theme_link="$HOME/$theme_file"
+        if [[ -L "$theme_link" ]]; then
+            theme_target=$(readlink "$theme_link")
+            if [[ "$theme_target" == "$DOTPATH/"* ]]; then
+                unlink "$theme_link"
+            fi
+        fi
+    done
 
-    # A previous repository location can leave the theme symlink broken.
-    # Reload again after relinking so an existing tmux session picks up the theme.
+    # Reload an existing tmux server using the generated theme.
     if command -v tmux >/dev/null 2>&1 &&
        tmux list-sessions >/dev/null 2>&1 &&
        [ -f "$HOME/.tmux.conf" ] &&
-       [ -f "$HOME/.tmux.theme.conf" ]; then
+       [ -f "$DOTPATH/theme/generated/tmux.theme.conf" ]; then
         tmux source-file "$HOME/.tmux.conf"
     fi
 fi
