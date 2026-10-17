@@ -59,6 +59,25 @@ local function close_empty_first_tab()
   end
 end
 
+-- Session scripts do not persist tab-local variables. Append names after
+-- persistence.nvim writes the session, so they share its lifecycle.
+local function append_tab_names(session)
+  local commands = {}
+  for tab = 1, vim.fn.tabpagenr("$") do
+    local name = vim.fn.gettabvar(tab, "dotfiles_tab_name", "")
+    if name ~= "" then
+      commands[#commands + 1] = string.format(
+        "call settabvar(%d, 'dotfiles_tab_name', %s)",
+        tab,
+        vim.fn.string(name)
+      )
+    end
+  end
+  if #commands > 0 then
+    vim.fn.writefile(commands, session, "a")
+  end
+end
+
 function M.setup()
   local ok, persistence = pcall(require, "persistence")
   if not ok then
@@ -90,6 +109,13 @@ function M.setup()
   persistence.setup({
     dir = vim.fn.stdpath("state") .. "/dotfiles-persistence/",
     branch = false,
+  })
+
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "PersistenceSavePost",
+    callback = function()
+      append_tab_names(persistence.current())
+    end,
   })
 
   vim.api.nvim_create_autocmd("VimEnter", {
