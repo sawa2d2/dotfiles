@@ -6,4 +6,4 @@ if [[ ${1:-} == --info ]]; then
   action=info
   shift
 fi
-exec python3 "$(dirname "$(realpath "$0")")/../tmux-session" "$action" "$@"
+exec python3 "$(dirname "$(realpath "$0")")/tmux-session" "$action" "$@"
