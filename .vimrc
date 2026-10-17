@@ -147,7 +147,7 @@ endfunction
 
 augroup dotfiles_project_session
     autocmd!
-    autocmd VimEnter * call <SID>RestoreProjectSession()
+    autocmd VimEnter * nested call <SID>RestoreProjectSession()
     autocmd VimLeavePre * call <SID>SaveProjectSession()
 augroup END
 
