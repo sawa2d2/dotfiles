@@ -64,3 +64,17 @@ if [[ -f "$DOTPATH/private.d/install" ]]; then
         "$DOTPATH/private.d/install"
     fi
 fi
+
+# Keep third-party iTerm2 color schemes outside the dotfiles repository.
+if [[ $(uname -s) == Darwin ]]; then
+    iterm_schemes="$HOME/.local/share/iTerm2-Color-Schemes"
+    if [[ -e "$iterm_schemes" || -L "$iterm_schemes" ]]; then
+        echo "SKIP: $iterm_schemes"
+    else
+        echo "Clone iTerm2 color schemes -> $iterm_schemes"
+        if [[ "$DRY_RUN" == false ]]; then
+            mkdir -p "$(dirname "$iterm_schemes")"
+            git clone --depth 1 https://github.com/mbadolato/iTerm2-Color-Schemes.git "$iterm_schemes"
+        fi
+    fi
+fi
