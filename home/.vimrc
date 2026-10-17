@@ -335,6 +335,8 @@ augroup dotfiles_shebang
     autocmd BufReadPost,BufEnter,TextChanged,TextChangedI,BufWritePre * call <SID>DetectShebangFiletype()
 augroup END
 
+" Vim retains its formatter fallback; Neovim uses conform.nvim.
+if !has("nvim")
 " Format Python on save in both Vim and Neovim, if Ruff is available.
 function! s:RuffFormatOnSave() abort
     if !executable('ruff') || &buftype !=# '' || !&modifiable || &readonly
@@ -406,3 +408,4 @@ augroup dotfiles_shfmt
     autocmd!
     autocmd BufWritePre * call <SID>ShfmtOnSave()
 augroup END
+endif

@@ -49,5 +49,6 @@ install_plugin lewis6991/gitsigns.nvim gitsigns-nvim
 install_plugin RRethy/vim-illuminate vim-illuminate
 install_plugin tomasr/molokai molokai
 install_plugin folke/persistence.nvim persistence-nvim
+install_plugin stevearc/conform.nvim conform-nvim
 
 echo 'Neovim plugins installed. Restart Neovim to load them.'
