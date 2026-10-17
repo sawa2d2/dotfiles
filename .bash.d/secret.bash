@@ -1,17 +1,25 @@
 # Load a 1Password secret into the current Bash/Zsh shell.
 # ~/.config/secret/secrets.conf: KEY=op://Vault/Item/field (one per line)
 # Example: GH_TOKEN=op://Private/GitHub/token
-# Usage: load-secret GH_TOKEN
+# Usage: load-secret [ENV_NAME] (no arguments: list available names)
 # Cache: 30 minutes; already exported variables remain until unset/shell exit.
 load-secret() {
-    [[ $# == 1 && $1 =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
-        printf 'Usage: load-secret <ENV_NAME>\n' >&2
-        return 2
-    }
+    [[ $# -le 1 ]] || { printf 'Usage: load-secret [ENV_NAME]\n' >&2; return 2; }
 
-    local name=$1 ref='' key value line root file hash mtime now tmp
+    local name=${1:-} ref='' key value line root file hash mtime now tmp
     local config="$HOME/.config/secret/secrets.conf"
     [[ -r $config ]] || { printf 'load-secret: cannot read %s\n' "$config" >&2; return 1; }
+    if [[ -z $name ]]; then
+        while IFS='=' read -r key value || [[ -n $key ]]; do
+            [[ $key =~ ^[A-Za-z_][A-Za-z0-9_]*$ && $value == op://* ]] &&
+                printf '%s\n' "$key"
+        done < "$config"
+        return 0
+    fi
+    [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || {
+        printf 'Usage: load-secret [ENV_NAME]\n' >&2
+        return 2
+    }
 
     while IFS='=' read -r key value || [[ -n $key ]]; do
         if [[ $key == "$name" ]]; then
