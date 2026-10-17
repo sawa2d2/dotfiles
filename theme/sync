@@ -76,15 +76,18 @@ highlight CmpItemAbbrMatchFuzzy guifg=$COLOR_PREFIX guibg=NONE gui=bold
 highlight CmpItemKind guifg=$COLOR_PREFIX guibg=NONE gui=bold
 highlight CmpItemMenu guifg=$COLOR_ACTIVE guibg=NONE
 highlight NormalFloat guifg=$COLOR_FG guibg=$COLOR_INACTIVE
+highlight LineNr guifg=#222222 guibg=#777b7e ctermfg=235 ctermbg=243
+highlight CursorLineNr guifg=#111111 guibg=#777b7e ctermfg=233 ctermbg=243
+highlight SignColumn guibg=#777b7e ctermbg=243
 highlight DotfilesHoverPadding guifg=$COLOR_INACTIVE guibg=$COLOR_INACTIVE
 highlight StatusLine guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE
 highlight StatusLineNC guifg=$COLOR_FG guibg=$COLOR_INACTIVE
 highlight DotStatusMode guifg=$COLOR_FG guibg=$COLOR_ACCENT gui=bold
 highlight DotStatusFile guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE gui=bold
-highlight DotStatusMeta guifg=$COLOR_FG guibg=$COLOR_SELECTED
+highlight DotStatusMeta guifg=$COLOR_FG guibg=$COLOR_INACTIVE
 highlight TabLineSel guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE gui=bold
 highlight TabLine guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight TabLineFill guibg=$COLOR_INACTIVE
+highlight TabLineFill guibg=$COLOR_SELECTED
 " Git gutter colors, shared across all theme variants.
 highlight GitSignsAdd guifg=$COLOR_GIT_CLEAN
 highlight GitSignsChange guifg=$COLOR_GIT_STAGED
