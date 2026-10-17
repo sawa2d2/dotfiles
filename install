@@ -5,11 +5,6 @@ set -euo pipefail
 DOTPATH=$(cd "$(dirname "$0")" && pwd -P)
 
 install_system() {
-    if [[ $(uname -s) != Linux ]]; then
-        echo "System-wide installation is supported only on Linux; no changes made." >&2
-        return 2
-    fi
-
     local dry_run=false
     if [[ ${1:-} == --dry-run && $# == 1 ]]; then
         dry_run=true
@@ -17,6 +12,13 @@ install_system() {
         echo "Usage: sudo ./install --system [--dry-run]" >&2
         return 2
     fi
+    # macOS already resolves dotfiles commands through its existing PATH.
+    # Do not duplicate binaries or modify system configuration.
+    if [[ $(uname -s) == Darwin ]]; then
+        echo "SKIP: system installation is unnecessary on macOS (no changes)"
+        return 0
+    fi
+
     if [[ $dry_run == false && $EUID != 0 ]]; then
         echo "System installation requires root" >&2
         return 1
@@ -35,10 +37,19 @@ install_system() {
     local profile=/etc/profile.d/dotfiles-bin.sh
     local sudoers=/etc/sudoers.d/dotfiles-bin
     local marker='# Managed by dotfiles install-dotfiles-bin.sh'
+    if [[ -L "$root" ]]; then
+        echo "Refusing symlinked destination: $root" >&2
+        return 1
+    fi
     if [[ -e "$root" && ! -f "$root/.dotfiles-bin-managed" ]]; then
         echo "Unmanaged destination: $root" >&2
         return 1
     fi
+    [[ $(uname -s) == Linux ]] || {
+        echo "Unsupported operating system" >&2
+        return 2
+    }
+
     if [[ -e "$profile" ]] && ! grep -qxF "$marker" "$profile"; then
         echo "Unmanaged profile: $profile" >&2
         return 1
