@@ -29,8 +29,8 @@ export MAGICK=convert
 export DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 
 # Load private configuration
-[[ -f "$DOTPATH/private.d/init.sh" ]] &&
-	source "$DOTPATH/private.d/init.sh"
+[[ -f "$DOTPATH/private.d/.bashrc" ]] &&
+	source "$DOTPATH/private.d/.bashrc"
 
 # History
 shopt -s histappend

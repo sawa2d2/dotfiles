@@ -67,10 +67,6 @@ sr() {
 	. "$(_shell_rc)"
 }
 
-er() {
-	"${EDITOR:-vim}" "$(_shell_rc)" && sr
-}
-
 # Terminal and SSH
 alias less='/usr/bin/less -+F'
 alias sshconf='vi ~/.ssh/config'

@@ -25,8 +25,8 @@ bindkey '^E' end-of-line
 export DOTPATH="$(dirname "$(dirname "$(realpath "${(%):-%x}")")")"
 
 # Load private configuration
-[[ -f "$DOTPATH/private.d/init.sh" ]] &&
-    source "$DOTPATH/private.d/init.sh"
+[[ -f "$DOTPATH/private.d/.zshrc" ]] &&
+    source "$DOTPATH/private.d/.zshrc"
 
 # Shared PATH configuration
 [[ -f "$DOTPATH/home/.bash.d/path.bash" ]] &&
