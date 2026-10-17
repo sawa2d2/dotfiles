@@ -84,9 +84,28 @@ if [[ -n $remote_feature ]]; then
     exit 1
   fi
 fi
+# Fast-forward local main when it only trails origin/main.
+# Never discard local commits or update a dirty checked-out main worktree.
+primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+current=$(git rev-parse --show-toplevel)
+main_worktree=$(git worktree list --porcelain | awk '
+  /^worktree / { path = substr($0, 10) }
+  /^branch refs\/heads\/main$/ { print path; exit }
+')
 if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]]; then
-	echo "Local main differs from origin/main; synchronize it first." >&2
-	exit 1
+  if ! git merge-base --is-ancestor main origin/main; then
+    echo "Local main has commits not on origin/main; synchronize it manually." >&2
+    exit 1
+  fi
+  if [[ -n $main_worktree ]]; then
+    if [[ -n $(git -C "$main_worktree" status --porcelain) ]]; then
+      echo "Main worktree has uncommitted changes: $main_worktree" >&2
+      exit 1
+    fi
+    git -C "$main_worktree" merge --ff-only origin/main
+  else
+    git branch -f main origin/main
+  fi
 fi
 if git diff --quiet main "$feature"; then
 	echo "No changes to integrate." >&2
@@ -94,8 +113,6 @@ if git diff --quiet main "$feature"; then
 fi
 
 # When running inside an additional worktree, integrate through the primary main worktree.
-primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
-current=$(git rev-parse --show-toplevel)
 if [[ $current != "$primary" ]]; then
   if [[ $(git -C "$primary" symbolic-ref --quiet --short HEAD || true) != main ]]; then
     echo "The primary worktree must be on main: $primary" >&2
