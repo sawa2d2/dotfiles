@@ -1,4 +1,5 @@
 " Use Molokai when installed; otherwise keep the default colorscheme
+silent! packadd molokai
 if !empty(globpath(&runtimepath, 'colors/molokai.vim'))
     colorscheme molokai
 endif
