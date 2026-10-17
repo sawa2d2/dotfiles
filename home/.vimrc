@@ -34,9 +34,12 @@ function! DotfilesTabline() abort
     for l:tab in range(1, tabpagenr("$"))
         let l:buffers = tabpagebuflist(l:tab)
         let l:buffer = get(l:buffers, tabpagewinnr(l:tab) - 1, -1)
-        let l:name = fnamemodify(bufname(l:buffer), ':t')
+        let l:name = gettabvar(l:tab, 'dotfiles_tab_name', '')
         if empty(l:name)
-            let l:name = '[No Name]'
+            let l:name = fnamemodify(bufname(l:buffer), ':t')
+            if empty(l:name)
+                let l:name = '[No Name]'
+            endif
         endif
         let l:name = substitute(l:name, '%', '%%', 'g')
         let l:modified = l:buffer > 0 && getbufvar(l:buffer, '&modified')
@@ -67,6 +70,24 @@ function! DotfilesTabline() abort
     return l:line
 endfunction
 set tabline=%!DotfilesTabline()
+
+" A tab name overrides its file title; empty restores the default.
+function! DotfilesRenameTab(name) abort
+    let t:dotfiles_tab_name = a:name
+    redrawtabline
+endfunction
+command! -nargs=* RenameTab call DotfilesRenameTab(<q-args>)
+
+function! DotfilesPromptRenameTab() abort
+    call inputsave()
+    try
+        let l:name = input('Tab name: ', get(t:, 'dotfiles_tab_name', ''))
+    finally
+        call inputrestore()
+    endtry
+    call DotfilesRenameTab(l:name)
+endfunction
+nnoremap <silent> <leader>, :call DotfilesPromptRenameTab()<CR>
 
 " Update unsaved markers on tab titles as buffer contents change.
 augroup dotfiles_tabline_modified
@@ -180,6 +201,17 @@ function! s:SaveProjectSession() abort
     try
         set sessionoptions=blank,curdir,folds,help,tabpages,winsize
         execute 'silent mksession! ' . fnameescape(s:project_session)
+        " :mksession omits tab-local variables, so persist custom titles.
+        let l:tab_names = []
+        for l:tab in range(1, tabpagenr('$'))
+            let l:name = gettabvar(l:tab, 'dotfiles_tab_name', '')
+            if !empty(l:name)
+                call add(l:tab_names, 'call settabvar(' . l:tab . ', "dotfiles_tab_name", ' . string(l:name) . ')')
+            endif
+        endfor
+        if !empty(l:tab_names)
+            call writefile(l:tab_names, s:project_session, 'a')
+        endif
     finally
         let &sessionoptions = l:options
     endtry
