@@ -156,6 +156,7 @@ augroup dotfiles_git_branch
     autocmd VimEnter,BufEnter,DirChanged,FocusGained * call <SID>UpdateGitBranch()
 augroup END
 
+if !has("nvim")
 " Automatically restore and save one editing session per project/directory.
 " Store sessions outside the repository and keep Vim/Neovim sessions separate.
 " Capture the startup file before a session changes the argument list or directory.
@@ -265,6 +266,8 @@ augroup dotfiles_project_session
     autocmd VimEnter * nested call <SID>RestoreProjectSession()
     autocmd VimLeavePre * call <SID>SaveProjectSession()
 augroup END
+
+endif
 
 " Colored statusline segments; Vim shares UI styling, Neovim adds LSP diagnostics.
 " Display paths relative to their Git root; otherwise use absolute paths.
