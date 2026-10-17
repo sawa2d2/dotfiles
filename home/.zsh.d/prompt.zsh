@@ -50,7 +50,7 @@ _prompt_path() {
 # Build the prompt before each command line.
 _prompt_command_zsh() {
     local exit_status=$?
-    local display_path branch="" dirty="" staged=""
+    local display_path branch="" dirty="" staged="" divergence="" counts="" ahead=0 behind=0
     local git_color
 
     display_path="$(_prompt_path)"
@@ -70,6 +70,12 @@ _prompt_command_zsh() {
         # Staged changes.
         if ! git diff --no-ext-diff --cached --quiet 2>/dev/null; then
             staged="+"
+        fi
+        # Compare with the locally known upstream; never fetch during prompt rendering.
+        if counts=$(git rev-list --left-right --count 'HEAD...@{upstream}' 2>/dev/null); then
+            read -r ahead behind <<< "$counts"
+            (( ahead > 0 )) && divergence="+$ahead"
+            (( behind > 0 )) && divergence+="-$behind"
         fi
     fi
 
@@ -97,7 +103,7 @@ _prompt_command_zsh() {
     if [[ -n "$branch" ]]; then
         branch="${branch//\%/%%}"
 
-        PROMPT+=" %F{${git_color}}(${branch}"
+        PROMPT+=" %F{${git_color}}(${branch}${divergence:+ ${divergence}}"
         [[ -n "$dirty" ]] && PROMPT+=" *"
         [[ -n "$staged" ]] && PROMPT+=" +"
         PROMPT+=")%f"

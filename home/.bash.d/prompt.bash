@@ -60,7 +60,7 @@ _prompt_command() {
   #history -a
   #history -n
 
-  local path branch="" dirty="" staged=""
+  local path branch="" dirty="" staged="" divergence="" counts="" ahead=0 behind=0
   local git_color
 
   path="$(_prompt_path)"
@@ -78,6 +78,12 @@ _prompt_command() {
     # Staged changes.
     if ! git diff --no-ext-diff --cached --quiet 2> /dev/null; then
       staged="+"
+    fi
+    # Compare with the locally known upstream; never fetch during prompt rendering.
+    if counts=$(git rev-list --left-right --count 'HEAD...@{upstream}' 2>/dev/null); then
+      read -r ahead behind <<< "$counts"
+      (( ahead > 0 )) && divergence="+$ahead"
+      (( behind > 0 )) && divergence+="-$behind"
     fi
   fi
 
@@ -102,7 +108,7 @@ _prompt_command() {
   PS1+="${path}"
 
   if [[ -n "$branch" ]]; then
-    PS1+=" ${git_color}(${branch}"
+    PS1+=" ${git_color}(${branch}${divergence:+ ${divergence}}"
     [[ -n "$dirty" ]] && PS1+=" *"
     [[ -n "$staged" ]] && PS1+=" +"
     PS1+=")${_PROMPT_RESET}"
