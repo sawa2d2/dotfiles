@@ -95,6 +95,7 @@ augroup END
 " Automatically restore and save one editing session per project/directory.
 " Store sessions outside the repository and keep Vim/Neovim sessions separate.
 " Capture the startup file before a session changes the argument list or directory.
+let s:multiple_startup_files = argc() > 1
 let s:startup_file = argc() == 1 && !isdirectory(argv(0)) ? fnamemodify(argv(0), ':p') : ''
 
 function! s:ProjectContext() abort
@@ -116,6 +117,10 @@ let s:editor = has('nvim') ? 'nvim' : 'vim'
 let s:project_session = s:session_dir . '/' . s:editor . '-' . sha256(s:project_root) . '.vim'
 
 function! s:RestoreProjectSession() abort
+    " Explicit multi-file openings must retain their requested windows.
+    if s:multiple_startup_files
+        return
+    endif
     " Manually loaded sessions take precedence.
     if !empty(v:this_session)
         return
@@ -165,6 +170,10 @@ function! s:RestoreProjectSession() abort
 endfunction
 
 function! s:SaveProjectSession() abort
+    " Do not overwrite the saved project layout during a multi-file opening.
+    if s:multiple_startup_files
+        return
+    endif
     call mkdir(fnamemodify(s:project_session, ':h'), 'p')
     " Do not snapshot editor-specific settings or live terminal processes.
     let l:options = &sessionoptions
