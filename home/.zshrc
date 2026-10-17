@@ -13,8 +13,8 @@ bindkey '^A' beginning-of-line
 bindkey '^E' end-of-line
 
 # Load private configuration
-[[ -f "$DOTPATH/private.d/.zshrc" ]] &&
-    source "$DOTPATH/private.d/.zshrc"
+[[ -f "$DOTPATH/private.d/home/.zshrc" ]] &&
+    source "$DOTPATH/private.d/home/.zshrc"
 
 # Load reusable Bash/Zsh modules after private PATH additions.
 for file in "$DOTPATH"/home/.shell.d/*.sh; do

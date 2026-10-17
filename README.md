@@ -10,6 +10,31 @@ Run `./install` from the repository root to install the dotfiles. After switchin
 ./install
 ```
 
+## private.d
+
+To manage private dotfiles separately, create a `private.d/` repository next to this repository's `home/` directory:
+
+```text
+dotfiles/
+├── home/
+└── private.d/
+    ├── home/
+    │   └── .config/
+    └── install -> ../install
+```
+
+Link the parent installer from `private.d/`, put private settings under `private.d/home/`, and run:
+
+```bash
+ln -s ../install private.d/install
+cd private.d
+./install
+```
+
+The installer links files under `home/` into `$HOME`. If private settings require extra setup, add an optional `install-extra` script.
+
+A symlinked `install` marks a child repository: its `home/.bashrc` and `home/.zshrc` are not linked into `$HOME`. Source these from the parent shell configuration when needed. This applies to nested child repositories as well.
+
 ## VS Code User Settings
 
 `./install` links `home/.config/vscode/settings.json` and `extensions.json` to the VS Code User directory:

@@ -1,1 +1,0 @@
-/home/ts/.vim/colors/molokai.vim

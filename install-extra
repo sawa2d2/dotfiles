@@ -1,0 +1,66 @@
+printf '\033[38;2;27;175;181m'
+cat <<'EOF'
+     _       _    __ _ _
+  __| | ___ | |_ / _(_) | ___  ___
+ / _` |/ _ \| __| |_| | |/ _ \/ __|
+| (_| | (_) | |_|  _| | |  __/\__ \
+ \__,_|\___/ \__|_| |_|_|\___||___/
+
+EOF
+printf '\033[0m'
+
+# Dotfiles-specific tasks. Standard install already links files in home/.
+# Dotfiles-specific installation tasks.
+link_file "$DOTPATH/.editorconfig" "$HOME/.editorconfig"
+
+# VS Code User settings are outside ~/.config on macOS.
+for vscode_file in settings.json extensions.json; do
+    vscode_src="$DOTPATH/home/.config/vscode/$vscode_file"
+    [[ -f "$vscode_src" ]] || continue
+    case "$(uname -s)" in
+        Darwin) vscode_dest="$HOME/Library/Application Support/Code/User/$vscode_file" ;;
+        Linux) vscode_dest="$HOME/.config/Code/User/$vscode_file" ;;
+        *) continue ;;
+    esac
+    if [[ -e "$vscode_dest" && ! -L "$vscode_dest" ]]; then
+        backup="$vscode_dest.backup"
+        backup_num=1
+        while [[ -e "$backup" || -L "$backup" ]]; do
+            backup="$vscode_dest.backup.$backup_num"
+            backup_num=$((backup_num + 1))
+        done
+        echo "Backup: $vscode_dest -> $backup"
+        if [[ "$DRY_RUN" == false ]]; then
+            mv "$vscode_dest" "$backup"
+        fi
+    fi
+    link_file "$vscode_src" "$vscode_dest"
+done
+
+if [[ -x "$DOTPATH/theme/sync" ]]; then
+    echo "Generate theme configurations"
+    if [[ "$DRY_RUN" == false ]]; then
+        "$DOTPATH/theme/sync" teal
+    fi
+    for theme_file in .tmux.theme.conf .vim.theme.vim; do
+        theme_link="$HOME/$theme_file"
+        if [[ -L "$theme_link" && "$(readlink "$theme_link")" == "$DOTPATH/"* ]]; then
+            echo "Unlink obsolete: $theme_link"
+            [[ "$DRY_RUN" == true ]] || unlink "$theme_link"
+        fi
+    done
+    if [[ "$DRY_RUN" == false ]] && command -v tmux >/dev/null 2>&1 &&
+       tmux list-sessions >/dev/null 2>&1 &&
+       [[ -f "$HOME/.tmux.conf" && -f "$DOTPATH/theme/generated/tmux.theme.conf" ]]; then
+        tmux source-file "$HOME/.tmux.conf"
+    fi
+fi
+
+if [[ -f "$DOTPATH/private.d/install" ]]; then
+    echo "Install private configuration"
+    if [[ "$DRY_RUN" == true ]]; then
+        "$DOTPATH/private.d/install" --dry-run
+    else
+        "$DOTPATH/private.d/install"
+    fi
+fi

@@ -18,8 +18,8 @@ export LANGUAGE=en_US:en
 # Resolve dotfiles root and load shared initialization
 export DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 # Load private configuration
-[[ -f "$DOTPATH/private.d/.bashrc" ]] &&
-	source "$DOTPATH/private.d/.bashrc"
+[[ -f "$DOTPATH/private.d/home/.bashrc" ]] &&
+	source "$DOTPATH/private.d/home/.bashrc"
 
 # Load reusable Bash/Zsh modules after private PATH additions.
 for file in "$DOTPATH"/home/.shell.d/*.sh; do
