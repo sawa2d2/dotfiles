@@ -45,6 +45,9 @@ function! DotfilesTabline() abort
             let l:severity = l:counts[0] > 0 ? 2 : (l:counts[1] > 0 ? 1 : 0)
         endif
 
+        if l:tab > 1
+            let l:line .= '%T%#TabLineFill# '
+        endif
         let l:line .= '%' . l:tab . 'T'
         if l:severity == 2
             let l:group = l:tab == tabpagenr() ? 'DotTabError' : 'DotTabErrorNC'
