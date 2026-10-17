@@ -1,36 +1,26 @@
 # Interactive shells only
 [[ -o interactive ]] || return
 
-# Locale and editor
+# Locale
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
-#
-# Editor fallback: nvim -> vim -> vi
-if command -v nvim >/dev/null 2>&1; then
-    export EDITOR=nvim
-elif command -v vim >/dev/null 2>&1; then
-    export EDITOR=vim
-else
-    export EDITOR=vi
-fi
 
-export MAGICK=convert
-
+# Resolve dotfiles root and load shared initialization
+export DOTPATH="$(dirname "$(dirname "$(realpath "${(%):-%x}")")")"
 # Keep readline-style Ctrl-A/Ctrl-E editing even when EDITOR is nvim/vi.
 bindkey -e
 bindkey '^A' beginning-of-line
 bindkey '^E' end-of-line
 
-# Resolve dotfiles root
-export DOTPATH="$(dirname "$(dirname "$(realpath "${(%):-%x}")")")"
-
 # Load private configuration
 [[ -f "$DOTPATH/private.d/.zshrc" ]] &&
     source "$DOTPATH/private.d/.zshrc"
 
-# Shared PATH configuration
-[[ -f "$DOTPATH/home/.bash.d/path.bash" ]] &&
-    source "$DOTPATH/home/.bash.d/path.bash"
+# Load reusable Bash/Zsh modules after private PATH additions.
+for file in "$DOTPATH"/home/.shell.d/*.sh; do
+    [[ -f "$file" ]] && source "$file"
+done
+unset file
 
 # Allow comments in interactive commands (including pasted snippets).
 setopt INTERACTIVE_COMMENTS
@@ -45,20 +35,7 @@ setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 
 # Terminal
-[[ -x /usr/bin/lesspipe ]] && eval "$(SHELL=/bin/sh lesspipe)"
-
-if [[ -x /usr/bin/dircolors ]]; then
-    if [[ -r "$HOME/.dircolors" ]]; then
-        eval "$(dircolors -b "$HOME/.dircolors")"
-    else
-        eval "$(dircolors -b)"
-    fi
-fi
-
-[[ -t 0 ]] && command -v stty >/dev/null 2>&1 && stty werase undef
-
-# Shared secret loader (also loaded automatically by Bash from .bash.d)
-[[ -f "$DOTPATH/home/.bash.d/secret.bash" ]] && source "$DOTPATH/home/.bash.d/secret.bash"
+dotfiles_terminal_init
 
 # Zsh extensions and widgets
 for file in "$HOME"/.zsh.d/*.zsh(N); do
@@ -82,7 +59,4 @@ done
 unset plugin plugin_file
 
 # Start tmux on an interactive terminal, unless already inside tmux
-if [[ -z ${TMUX:-} && -t 0 && -t 1 ]] &&
-   command -v tmux >/dev/null 2>&1; then
-    tmux -u new-session
-fi
+dotfiles_tmux_auto_start
