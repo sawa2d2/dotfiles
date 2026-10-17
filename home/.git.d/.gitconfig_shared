@@ -15,6 +15,8 @@
     df = diff
     dfh = diff HEAD
     dfm = diff origin/main..HEAD
+    dfn = "!f() { git diff \"HEAD~${1:-1}\" \"HEAD~$((${1:-1}-1))\"; }; f"
+    dff = "!f() { n=${1:-1}; git diff --name-only \"HEAD~$n\" \"HEAD~$((n-1))\"; }; f"
     t = tag
     a = add
     aa = add -A
