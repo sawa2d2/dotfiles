@@ -2,7 +2,7 @@
 [[ -o interactive ]] || return
 
 # Keep the first occurrence of each PATH entry.
-typeset -U path
+typeset -gU path
 
 # Directory stack and terminal behavior.
 setopt PUSHD_IGNORE_DUPS
