@@ -11,13 +11,9 @@
       url = "github:tomasr/molokai";
       flake = false;
     };
-    fzf-git = {
-      url = "github:junegunn/fzf-git.sh";
-      flake = false;
-    };
   };
 
-  outputs = { nixpkgs, home-manager, fzf-git, molokai, ... }:
+  outputs = { nixpkgs, home-manager, molokai, ... }:
     let
       requireEnv = name:
         let value = builtins.getEnv name;
@@ -28,7 +24,7 @@
       homeDirectory = requireEnv "HOME_MANAGER_HOME";
       mkHome = system: home-manager.lib.homeManagerConfiguration {
         pkgs = nixpkgs.legacyPackages.${system};
-        extraSpecialArgs = { inherit fzf-git molokai; };
+        extraSpecialArgs = { inherit molokai; };
         modules = [
           ./home.nix
           {

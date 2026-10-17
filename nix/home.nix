@@ -1,4 +1,4 @@
-{ pkgs, fzf-git, molokai, ... }:
+{ pkgs, molokai, ... }:
 
 {
   home.stateVersion = "26.05";
@@ -48,7 +48,6 @@
   home.file.".config/nvim/colors/molokai.vim".source = "${molokai}/colors/molokai.vim";
 
   # Keep the path sourced by both Bash and Zsh unchanged.
-  home.file.".local/opt/fzf-git.sh".source = fzf-git;
 
   programs.home-manager.enable = true;
 }

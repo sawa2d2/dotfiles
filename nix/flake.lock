@@ -1,21 +1,5 @@
 {
   "nodes": {
-    "fzf-git": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790525933,
-        "narHash": "sha256-pu3qAtY/M5IPfRHGKhC1rFscSCBvgnjaD2KlAXbZ8L0=",
-        "owner": "junegunn",
-        "repo": "fzf-git.sh",
-        "rev": "110c0a10b744131b90861aa1d1fff6fbe0794f9d",
-        "type": "github"
-      },
-      "original": {
-        "owner": "junegunn",
-        "repo": "fzf-git.sh",
-        "type": "github"
-      }
-    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -71,7 +55,6 @@
     },
     "root": {
       "inputs": {
-        "fzf-git": "fzf-git",
         "home-manager": "home-manager",
         "molokai": "molokai",
         "nixpkgs": "nixpkgs"

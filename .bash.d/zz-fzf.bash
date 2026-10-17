@@ -62,13 +62,21 @@ else
   bind -x '"\eg": fzf_gists'
 fi
 
-# Select a branch name without relying on fzf-git.sh's private return format.
+# Reject interactive Git operations outside a repository.
+_fzf_git_require_repo() {
+  git rev-parse --git-dir >/dev/null 2>&1 && return 0
+  echo 'Not a Git repository' >&2
+  return 1
+}
+
+# Select a Git branch using fzf.
 _fzf_git_select_branch() {
   git for-each-ref --sort=-committerdate --format='%(refname:short)' refs/heads refs/remotes |
     grep -v '/HEAD$' |
     fzf --layout=reverse --no-sort --prompt='[ BRANCH ] > ' --preview 'git log --oneline --max-count=12 --color=always {}'
 }
 gbr() {
+  _fzf_git_require_repo || return 1
   local branch
   if [[ ${1:-} == -b ]]; then
     if (($# != 2)) || [[ -z $2 ]]; then
@@ -111,6 +119,7 @@ gbr() {
 }
 
 gwt() {
+  _fzf_git_require_repo || return 1
   local branch path selected
   if [[ ${1:-} == -d ]] && (($# <= 2)); then
     if (($# == 2)); then
@@ -151,10 +160,3 @@ gwt() {
   fi
   cd -- "$path"
 }
-
-# Load fzf-git shortcuts after the other interactive key bindings.
-fzf_git_script="$HOME/.local/opt/fzf-git.sh/fzf-git.sh"
-if [[ -f "$fzf_git_script" ]]; then
-  source "$fzf_git_script"
-fi
-unset fzf_git_script
