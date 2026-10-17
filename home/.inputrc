@@ -23,6 +23,9 @@ set colored-stats on
 # Color common prefixes in completion lists
 set colored-completion-prefix on
 
+# Disable Readline's terminal bell (Bash counterpart to Zsh NO_BEEP).
+set bell-style none
+
 # Disable automatic binding of terminal special characters
 set bind-tty-special-chars off
 

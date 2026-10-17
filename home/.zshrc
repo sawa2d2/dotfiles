@@ -1,6 +1,14 @@
 # Interactive shells only
 [[ -o interactive ]] || return
 
+# Keep the first occurrence of each PATH entry.
+typeset -U path
+
+# Directory stack and terminal behavior.
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt NO_BEEP
+
 # Locale
 export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
