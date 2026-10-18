@@ -289,6 +289,8 @@ nnoremap <silent> <C-q><C-q> :qa<CR>
 "tab
 nmap <S-L> gt
 nmap <S-H> gT
+nnoremap <silent> <leader>h :tabmove -1<CR>
+nnoremap <silent> <leader>l :tabmove +1<CR>
 nmap t :tabe<Return>:E<Return>
 "nmap te :tabedit
 "nmap tl :Unite tab
