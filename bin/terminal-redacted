@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Run an interactive shell or command behind a PTY output redactor.
+set -euo pipefail
+
+if ! command -v hushterm >/dev/null 2>&1; then
+    printf 'terminal-redacted: hushterm is required (https://github.com/trilliumsmith/hushterm)\n' >&2
+    exit 127
+fi
+
+config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/hushterm"
+blocklist_dir="$config_dir/blocklists"
+
+# Never start with an empty blocklist accidentally: explicit setup is required.
+if [[ ! -f "$blocklist_dir/personal.yaml" ]]; then
+    printf 'terminal-redacted: create %s from the dotfiles example first\n' "$blocklist_dir/personal.yaml" >&2
+    exit 2
+fi
+
+if (( $# )); then
+    exec hushterm --blocklist-dir "$blocklist_dir" -- "$@"
+fi
+
+shell="${SHELL:-/bin/bash}"
+exec hushterm --blocklist-dir "$blocklist_dir" -- "$shell" -l
