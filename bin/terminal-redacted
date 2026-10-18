@@ -3,7 +3,7 @@
 set -euo pipefail
 
 if ! command -v hushterm >/dev/null 2>&1; then
-    printf 'terminal-redacted: hushterm is required (https://github.com/trilliumsmith/hushterm)\n' >&2
+    printf 'terminal-redacted: hushterm is required (https://github.com/trillium/hushterm)\n' >&2
     exit 127
 fi
 
