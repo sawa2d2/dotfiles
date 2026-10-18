@@ -25,6 +25,11 @@ set virtualedit=onemore
 set smartindent
 "set visualbell
 set showmatch
+
+" Insert matching brackets and keep cursor inside.
+inoremap ( ()<Left>
+inoremap [ []<Left>
+inoremap { {}<Left>
 set laststatus=2
 set showtabline=2
 

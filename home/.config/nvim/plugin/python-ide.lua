@@ -150,24 +150,18 @@ vim.api.nvim_create_autocmd("CursorHold", {
 })
 
 
-vim.diagnostic.config({
-  underline = true,
-  signs = true,
-  virtual_text = { spacing = 2 },
-  update_in_insert = false,
-  severity_sort = true,
-})
+-- Diagnostic presentation is configured in dotfiles_diagnostic_lines.lua.
 
 -- Diagnostic navigation and lists (Neovim built-ins; no extra plugin).
 vim.keymap.set("n", "]d", function()
-  vim.diagnostic.jump({ count = 1, float = true })
+  vim.diagnostic.jump({ count = 1, float = { severity = { min = vim.diagnostic.severity.WARN } }, severity = { min = vim.diagnostic.severity.WARN } })
 end, { desc = "Next diagnostic" })
 
 vim.keymap.set("n", "[d", function()
-  vim.diagnostic.jump({ count = -1, float = true })
+  vim.diagnostic.jump({ count = -1, float = { severity = { min = vim.diagnostic.severity.WARN } }, severity = { min = vim.diagnostic.severity.WARN } })
 end, { desc = "Previous diagnostic" })
 
 vim.keymap.set("n", "<leader>dl", function()
-  vim.diagnostic.setqflist({ open = true })
+  vim.diagnostic.setqflist({ open = true, severity = { min = vim.diagnostic.severity.WARN } })
 end, { desc = "All diagnostics (quickfix)" })
 
