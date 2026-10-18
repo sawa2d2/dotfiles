@@ -1,14 +1,13 @@
 # Terminal display redaction
 
 The optional `bin/terminal-redacted` entry point launches a login shell (or
-a command) through [hushterm](https://github.com/trilliumsmith/hushterm).
+a command) through [hushterm](https://github.com/trillium/hushterm).
 hushterm filters PTY output before it reaches the visible terminal.
 This feature is **opt-in**; normal shell startup is unchanged.
 
 ## Setup
 
-Install hushterm separately (for example through Go or a Nix package, if
-available), then create a **local** blocklist:
+Install hushterm using Go:\n\n```sh\ngo install github.com/trillium/hushterm@latest\n```\n\nThen create a **local** blocklist:
 
 ```sh
 mkdir -p ~/.config/hushterm/blocklists
