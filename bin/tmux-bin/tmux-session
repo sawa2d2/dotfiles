@@ -193,8 +193,8 @@ def apply(name):
             tm("select-layout", "-t", wid, window["layout"])
             for pane in window["panes"]:
                 index = pane["index"]
-                actual = dict((int(i), pid) for i, pid in records(
-                    "list-panes", "-t", wid, fields=("pane_index", "pane_id")))
+                actual = {int(i): pid for i, pid in records(
+                    "list-panes", "-t", wid, fields=("pane_index", "pane_id"))}
                 desired_id = pane_ids[index]
                 if actual.get(index) != desired_id:
                     tm("swap-pane", "-d", "-s", desired_id, "-t", actual[index])

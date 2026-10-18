@@ -1,8 +1,8 @@
 #!/bin/sh
 
-DIR=$(cd $(dirname $0) && pwd)
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-function usage {
+usage() {
 	cat <<EOF
 Usage: $(basename "$0") [OPTION]...
   -h        Display help
@@ -27,11 +27,11 @@ while getopts ":rh" OPT; do
 	esac
 done
 
-if test "$IS_ROOTLESS" == "true"; then
+if test "${IS_ROOTLESS:-false}" = "true"; then
 	podman machine set --rootful=false
 else
 	podman machine set --rootful=true
 fi
 
-$DIR/poi
-$DIR/pos
+"$DIR/poi"
+"$DIR/pos"
