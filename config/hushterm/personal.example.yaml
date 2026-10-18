@@ -1,0 +1,12 @@
+# Copy to ~/.config/hushterm/blocklists/personal.yaml and customize locally.
+# Do not commit the personalized copy to a public repository.
+version: 1
+source: personal
+case_sensitive: true
+entries:
+  - value: "my-private-hostname"
+    label: "HOST"
+  - value: "/home/my-private-username"
+    label: "PRIVATE_PATH"
+  - value: "my-private-username"
+    label: "USER"
