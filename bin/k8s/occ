@@ -2,9 +2,9 @@
 context=$1
 
 if [[ -z $context ]]; then
-	selected_context=$(oc config get-contexts --no-headers | fzf --layout=reverse) || exit 0
-	[[ -n $selected_context ]] || exit 0
-	name=$(awk '{print ($1 == "*" ? $2 : $1)}' <<<"$selected_context")
-	oc config use-context "$name"
-	exit 0
+  selected_context=$(oc config get-contexts --no-headers | fzf --layout=reverse) || exit 0
+  [[ -n $selected_context ]] || exit 0
+  name=$(awk '{print ($1 == "*" ? $2 : $1)}' <<< "$selected_context")
+  oc config use-context "$name"
+  exit 0
 fi

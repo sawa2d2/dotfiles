@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-if command -v nerdctl >/dev/null 2>&1; then
-	runtime=$(command -v nerdctl)
-elif command -v podman >/dev/null 2>&1; then
-	runtime=$(command -v podman)
+if command -v nerdctl > /dev/null 2>&1; then
+  runtime=$(command -v nerdctl)
+elif command -v podman > /dev/null 2>&1; then
+  runtime=$(command -v podman)
 else
-	# Skip this wrapper when searching PATH for the actual Docker binary.
-	IFS=: read -r -a path_dirs <<<"$PATH"
-	for dir in "${path_dirs[@]}"; do
-		candidate="${dir:-.}/docker"
-		if [[ -x $candidate && ! $candidate -ef $0 ]]; then
-			runtime=$candidate
-			break
-		fi
-	done
+  # Skip this wrapper when searching PATH for the actual Docker binary.
+  IFS=: read -r -a path_dirs <<< "$PATH"
+  for dir in "${path_dirs[@]}"; do
+    candidate="${dir:-.}/docker"
+    if [[ -x $candidate && ! $candidate -ef $0 ]]; then
+      runtime=$candidate
+      break
+    fi
+  done
 fi
 
 if [[ -z ${runtime:-} ]]; then
-	echo "No container runtime found" >&2
-	exit 1
+  echo "No container runtime found" >&2
+  exit 1
 fi
 
 exec "$runtime" "$@"

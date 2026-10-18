@@ -10,18 +10,27 @@ message=
 message_given=false
 while (($#)); do
   case $1 in
-    -y|--yes) assume_yes=true; shift ;;
-    -m)
-      if (($# < 2)) || [[ -z $2 ]]; then
-        usage
-        exit 2
-      fi
-      message=$2
-      message_given=true
-      shift 2
-      ;;
-    -h|--help) usage; exit 0 ;;
-    *) usage; exit 2 ;;
+  -y | --yes)
+    assume_yes=true
+    shift
+    ;;
+  -m)
+    if (($# < 2)) || [[ -z $2 ]]; then
+      usage
+      exit 2
+    fi
+    message=$2
+    message_given=true
+    shift 2
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
   esac
 done
 
@@ -42,8 +51,8 @@ commit_squash() {
 }
 
 feature=$(git symbolic-ref --quiet --short HEAD) || {
-	echo "Not on a branch." >&2
-	exit 1
+  echo "Not on a branch." >&2
+  exit 1
 }
 if ! $message_given; then
   prefix=${feature%%/*}
@@ -52,23 +61,23 @@ if ! $message_given; then
     message=${feature//-/ }
   else
     case $prefix in
-      feat|feature) prefix=feat ;;
-      fix|bugfix) prefix=fix ;;
-      docs|doc) prefix=docs ;;
-      chore|refactor|test|perf|ci|build|style) ;;
-      *) prefix=chore ;;
+    feat | feature) prefix=feat ;;
+    fix | bugfix) prefix=fix ;;
+    docs | doc) prefix=docs ;;
+    chore | refactor | test | perf | ci | build | style) ;;
+    *) prefix=chore ;;
     esac
     message="$prefix: ${description//-/ }"
   fi
 fi
 
 if [[ $feature == main ]]; then
-	echo "Run gfinish from a feature branch." >&2
-	exit 1
+  echo "Run gfinish from a feature branch." >&2
+  exit 1
 fi
 if [[ -n $(git status --porcelain) ]]; then
-	echo "Commit or stash changes before running gfinish." >&2
-	exit 1
+  echo "Commit or stash changes before running gfinish." >&2
+  exit 1
 fi
 
 git fetch origin main
@@ -108,8 +117,8 @@ if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]]; then
   fi
 fi
 if git diff --quiet main "$feature"; then
-	echo "No changes to integrate." >&2
-	exit 1
+  echo "No changes to integrate." >&2
+  exit 1
 fi
 
 # When running inside an additional worktree, integrate through the primary main worktree.
@@ -146,7 +155,7 @@ if [[ $current != "$primary" ]]; then
   # Do not force-remove: if the feature worktree acquired changes, preserve them.
   git worktree remove "$current"
   git branch -D "$feature"
-  if git ls-remote --exit-code --heads origin "$feature" >/dev/null 2>&1; then
+  if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
     if confirm "Delete remote branch origin/$feature?"; then
       git push origin --delete "$feature"
     fi
@@ -163,8 +172,8 @@ confirm "Continue?" || exit 0
 temporary="gfinish-$$"
 git switch -c "$temporary" main
 if ! git merge --squash "$feature"; then
-	echo "Squash failed on $temporary. Resolve or abort before retrying." >&2
-	exit 1
+  echo "Squash failed on $temporary. Resolve or abort before retrying." >&2
+  exit 1
 fi
 commit_squash .
 
@@ -175,10 +184,10 @@ git push origin main
 git branch -d "$temporary"
 git branch -D "$feature"
 
-if git ls-remote --exit-code --heads origin "$feature" >/dev/null 2>&1; then
-	if confirm "Delete remote branch origin/$feature?"; then
-		git push origin --delete "$feature"
-	fi
+if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
+  if confirm "Delete remote branch origin/$feature?"; then
+    git push origin --delete "$feature"
+  fi
 fi
 
 echo "Finished: $feature -> main"

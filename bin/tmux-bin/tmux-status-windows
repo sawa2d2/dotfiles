@@ -4,42 +4,51 @@ set -euo pipefail
 
 # Refresh session-level status heights when windows or clients change.
 if [[ ${1:-} == --sync && $# == 1 ]]; then
-    # Aggregate client widths with awk to support macOS's default Bash 3.2.
-    # For shared sessions, use the narrowest attached client's width.
-    while IFS=$'\t' read -r session width; do
-        [[ -n $session && $width =~ ^[0-9]+$ ]] || continue
-        rows=$("$0" --rows "$session" "$width") || continue
-        current=$(tmux show-options -v -t "$session" status 2>/dev/null) || continue
-        # Store rendered rows synchronously; tmux status #() is asynchronous
-        # and may not have a usable result when the status is redrawn.
-        row0=$("$0" 0 "$session" "$width" 2>/dev/null) || continue
-        row1=$("$0" 1 "$session" "$width" 2>/dev/null) || continue
-        # Restore may delete a session between list-clients and set-option.
-        # Ignore only vanished sessions; preserve failures on live sessions.
-        tmux set-option -t "$session" @tmux_window_row0 "$row0" 2>/dev/null ||
-            { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
-        tmux set-option -t "$session" @tmux_window_row1 "$row1" 2>/dev/null ||
-            { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
-        target=$rows
-        [[ $rows == 1 ]] && target=on
-        if [[ $current != "$target" ]]; then
-            tmux set-option -t "$session" status "$target" 2>/dev/null ||
-                { tmux has-session -t "$session" 2>/dev/null && exit 1; continue; }
-        fi
-    done < <(
-        tmux list-clients -F '#{session_id}	#{client_width}' |
-            awk -F '\t' '$2 ~ /^[0-9]+$/ && $1 != "" {
+  # Aggregate client widths with awk to support macOS's default Bash 3.2.
+  # For shared sessions, use the narrowest attached client's width.
+  while IFS=$'\t' read -r session width; do
+    [[ -n $session && $width =~ ^[0-9]+$ ]] || continue
+    rows=$("$0" --rows "$session" "$width") || continue
+    current=$(tmux show-options -v -t "$session" status 2> /dev/null) || continue
+    # Store rendered rows synchronously; tmux status #() is asynchronous
+    # and may not have a usable result when the status is redrawn.
+    row0=$("$0" 0 "$session" "$width" 2> /dev/null) || continue
+    row1=$("$0" 1 "$session" "$width" 2> /dev/null) || continue
+    # Restore may delete a session between list-clients and set-option.
+    # Ignore only vanished sessions; preserve failures on live sessions.
+    tmux set-option -t "$session" @tmux_window_row0 "$row0" 2> /dev/null ||
+      {
+        tmux has-session -t "$session" 2> /dev/null && exit 1
+        continue
+      }
+    tmux set-option -t "$session" @tmux_window_row1 "$row1" 2> /dev/null ||
+      {
+        tmux has-session -t "$session" 2> /dev/null && exit 1
+        continue
+      }
+    target=$rows
+    [[ $rows == 1 ]] && target=on
+    if [[ $current != "$target" ]]; then
+      tmux set-option -t "$session" status "$target" 2> /dev/null ||
+        {
+          tmux has-session -t "$session" 2> /dev/null && exit 1
+          continue
+        }
+    fi
+  done < <(
+    tmux list-clients -F '#{session_id}	#{client_width}' |
+      awk -F '\t' '$2 ~ /^[0-9]+$/ && $1 != "" {
                 if (!($1 in widths) || $2 < widths[$1]) widths[$1] = $2
             } END {
                 for (session in widths) print session "\t" widths[session]
             }'
-    )
-    exit 0
+  )
+  exit 0
 fi
 
-if (( $# != 3 )) || [[ $1 != 0 && $1 != 1 && $1 != --rows ]] || [[ ! $3 =~ ^[0-9]+$ ]]; then
-    printf 'Usage: tmux-status-windows <0|1|--rows> <session-id> <width>\n' >&2
-    exit 2
+if (($# != 3)) || [[ $1 != 0 && $1 != 1 && $1 != --rows ]] || [[ ! $3 =~ ^[0-9]+$ ]]; then
+  printf 'Usage: tmux-status-windows <0|1|--rows> <session-id> <width>\n' >&2
+  exit 2
 fi
 
 requested_row=$1
@@ -51,27 +60,27 @@ first_width=$((width > 34 ? width - 34 : 1))
 second_width=$((width > 3 ? width - 3 : 1))
 
 if [[ $requested_row == --rows ]]; then
-    row=0
-    used=0
-    while IFS= read -r label; do
-        [[ -n $label ]] || continue
-        length=$((${#label} + 2))
-        (( used > 0 )) && length=$((length + 1))
-        limit=$((row == 0 ? first_width : second_width))
-        if (( used > 0 && used + length > limit )); then
-            row=1
-            used=0
-            length=$((${#label} + 2))
-        fi
-        used=$((used + length))
-    done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}')
-    printf '%s\n' "$((row + 1))"
-    exit 0
+  row=0
+  used=0
+  while IFS= read -r label; do
+    [[ -n $label ]] || continue
+    length=$((${#label} + 2))
+    ((used > 0)) && length=$((length + 1))
+    limit=$((row == 0 ? first_width : second_width))
+    if ((used > 0 && used + length > limit)); then
+      row=1
+      used=0
+      length=$((${#label} + 2))
+    fi
+    used=$((used + length))
+  done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}')
+  printf '%s\n' "$((row + 1))"
+  exit 0
 fi
 
 # Query the theme once; use tmux format expansion to resolve custom colors.
 IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg bar_bg <<< "$(
-    tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}	#{@color_bg}'
+  tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}	#{@color_bg}'
 )"
 active_fg=${active_fg:-white}
 active_bg=${active_bg:-black}
@@ -82,30 +91,30 @@ bar_bg=${bar_bg:-default}
 row=0
 used=0
 while IFS=$'\t' read -r label active; do
-    [[ -n $label ]] || continue
-    entry=" $label "
+  [[ -n $label ]] || continue
+  entry=" $label "
+  length=${#entry}
+  ((used > 0)) && length=$((length + 1))
+  limit=$((row == 0 ? first_width : second_width))
+
+  if ((used > 0 && used + length > limit)); then
+    row=$((row + 1))
+    used=0
     length=${#entry}
-    (( used > 0 )) && length=$((length + 1))
-    limit=$((row == 0 ? first_width : second_width))
+  fi
+  ((row > 1)) && break
 
-    if (( used > 0 && used + length > limit )); then
-        row=$((row + 1))
-        used=0
-        length=${#entry}
+  if ((row == requested_row)); then
+    if ((used > 0)); then
+      printf '#[bg=%s] ' "$bar_bg"
     fi
-    (( row > 1 )) && break
-
-    if (( row == requested_row )); then
-        if (( used > 0 )); then
-            printf '#[bg=%s] ' "$bar_bg"
-        fi
-        if [[ $active == 1 ]]; then
-            printf '#[fg=%s,bg=%s,bold]%s' "$active_fg" "$active_bg" "$entry"
-        else
-            printf '#[fg=%s,bg=%s,nobold]%s' "$inactive_fg" "$inactive_bg" "$entry"
-        fi
+    if [[ $active == 1 ]]; then
+      printf '#[fg=%s,bg=%s,bold]%s' "$active_fg" "$active_bg" "$entry"
+    else
+      printf '#[fg=%s,bg=%s,nobold]%s' "$inactive_fg" "$inactive_bg" "$entry"
     fi
-    used=$((used + length))
+  fi
+  used=$((used + length))
 done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}')
 
 printf '#[default]'

@@ -2,23 +2,23 @@
 set -uo pipefail
 
 (($# > 0)) || {
-	echo "Usage: pdfmin <file.pdf>..." >&2
-	exit 2
+  echo "Usage: pdfmin <file.pdf>..." >&2
+  exit 2
 }
 
 status=0
 pids=()
 for file in "$@"; do
-	gs -sDEVICE=pdfwrite \
-		-dCompatibilityLevel=1.4 \
-		-dPDFSETTINGS=/ebook \
-		-dNOPAUSE -dQUIET -dBATCH \
-		-sOutputFile="${file%.pdf}.min.pdf" "$file" &
-	pids+=("$!")
-	if ((${#pids[@]} == 4)); then
-		for pid in "${pids[@]}"; do wait "$pid" || status=1; done
-		pids=()
-	fi
+  gs -sDEVICE=pdfwrite \
+    -dCompatibilityLevel=1.4 \
+    -dPDFSETTINGS=/ebook \
+    -dNOPAUSE -dQUIET -dBATCH \
+    -sOutputFile="${file%.pdf}.min.pdf" "$file" &
+  pids+=("$!")
+  if ((${#pids[@]} == 4)); then
+    for pid in "${pids[@]}"; do wait "$pid" || status=1; done
+    pids=()
+  fi
 done
 for pid in "${pids[@]}"; do wait "$pid" || status=1; done
 exit "$status"

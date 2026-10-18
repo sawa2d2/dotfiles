@@ -3,8 +3,8 @@ command -v fzf > /dev/null 2>&1 || return 0
 # Remove stale color options exported by the previous theme loader.
 # Keep all other fzf defaults; colors now come from FZF_DEFAULT_OPTS_FILE.
 if [[ ${FZF_DEFAULT_OPTS:-} == *--color=* ]]; then
-    FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS//--color=[^[:space:]]*/}"
-    export FZF_DEFAULT_OPTS
+  FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS//--color=[^[:space:]]*/}"
+  export FZF_DEFAULT_OPTS
 fi
 export FZF_DEFAULT_OPTS_FILE="$DOTPATH/theme/generated/fzf.opts"
 

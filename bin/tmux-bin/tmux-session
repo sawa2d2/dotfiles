@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Manual tmux session snapshots (layouts, directories, foreground commands)."""
+
 import argparse
 import json
 import os
@@ -13,9 +14,17 @@ from urllib.parse import quote
 DIR = Path.home() / ".local/state/tmux/sessions"
 
 # Only relaunch explicitly approved interactive applications, without saved argv.
-RESTORABLE_COMMANDS = frozenset({
-    "vi", "vim", "nvim", "bob", "claude", "codex",
-})
+RESTORABLE_COMMANDS = frozenset(
+    {
+        "vi",
+        "vim",
+        "nvim",
+        "bob",
+        "claude",
+        "codex",
+    }
+)
+
 
 def tm(*args):
     p = subprocess.run(["tmux", *map(str, args)], capture_output=True, text=True)
@@ -23,27 +32,37 @@ def tm(*args):
         raise RuntimeError(p.stderr.strip() or "tmux command failed")
     return p.stdout.rstrip("\n")
 
+
 def records(*args, fields):
     fmt = "\t".join("#{" + field + "}" for field in fields)
     output = tm(*args, "-F", fmt)
     return [line.split("\t") for line in output.splitlines() if line]
+
 
 def current():
     if not os.getenv("TMUX"):
         raise ValueError("Specify a session name outside tmux")
     return tm("display-message", "-p", "#{session_name}")
 
+
 def path(name):
     return DIR / (quote(name, safe="") + ".json")
 
+
 def exists(name):
-    return subprocess.run(["tmux", "has-session", "-t", name], capture_output=True).returncode == 0
+    return (
+        subprocess.run(
+            ["tmux", "has-session", "-t", name], capture_output=True
+        ).returncode
+        == 0
+    )
+
 
 def foreground_process(pane_pid, command):
     """Linux: argv of the terminal foreground process-group leader, if readable."""
     try:
         stat = Path(f"/proc/{pane_pid}/stat").read_text()
-        fields = stat[stat.rfind(")") + 2:].split()
+        fields = stat[stat.rfind(")") + 2 :].split()
         session, tty, foreground = int(fields[3]), int(fields[4]), int(fields[5])
         if tty == 0 or foreground <= 0:
             return None
@@ -53,7 +72,11 @@ def foreground_process(pane_pid, command):
                 continue
             try:
                 parts = (entry / "stat").read_text().split(") ", 1)[1].split()
-                if (int(parts[2]), int(parts[3]), int(parts[4])) == (foreground, session, tty):
+                if (int(parts[2]), int(parts[3]), int(parts[4])) == (
+                    foreground,
+                    session,
+                    tty,
+                ):
                     candidates.append(int(entry.name))
             except (OSError, ValueError, IndexError):
                 continue
@@ -61,7 +84,10 @@ def foreground_process(pane_pid, command):
             try:
                 selected_pid = pane_pid if pid == os.getpid() else pid
                 raw = Path(f"/proc/{selected_pid}/cmdline").read_bytes()
-                argv = [arg.decode("utf-8", "replace") for arg in raw.rstrip(b"\0").split(b"\0")]
+                argv = [
+                    arg.decode("utf-8", "replace")
+                    for arg in raw.rstrip(b"\0").split(b"\0")
+                ]
                 if argv and argv[0]:
                     if selected_pid == pane_pid:
                         command = Path(argv[0].lstrip("-")).name
@@ -77,25 +103,61 @@ def snapshot(name):
     sid = tm("display-message", "-p", "-t", name, "#{session_id}")
     windows = []
     for wid, idx, title, layout, active, width, height in records(
-        "list-windows", "-t", sid,
-        fields=("window_id", "window_index", "window_name", "window_layout",
-                "window_active", "window_width", "window_height")
+        "list-windows",
+        "-t",
+        sid,
+        fields=(
+            "window_id",
+            "window_index",
+            "window_name",
+            "window_layout",
+            "window_active",
+            "window_width",
+            "window_height",
+        ),
     ):
-        panes = [{"index": int(idx), "cwd": cwd, "active": active == "1",
-                  **foreground_process(int(pid), command)}
-                 for idx, cwd, active, command, pid in records(
-                     "list-panes", "-t", wid,
-                     fields=("pane_index", "pane_current_path", "pane_active",
-                             "pane_current_command", "pane_pid"))]
+        panes = [
+            {
+                "index": int(idx),
+                "cwd": cwd,
+                "active": active == "1",
+                **foreground_process(int(pid), command),
+            }
+            for idx, cwd, active, command, pid in records(
+                "list-panes",
+                "-t",
+                wid,
+                fields=(
+                    "pane_index",
+                    "pane_current_path",
+                    "pane_active",
+                    "pane_current_command",
+                    "pane_pid",
+                ),
+            )
+        ]
         if not panes:
             raise ValueError("Window has no panes")
-        windows.append({"index": int(idx), "name": title, "layout": layout,
-                        "active": active == "1", "width": int(width),
-                        "height": int(height), "panes": panes})
+        windows.append(
+            {
+                "index": int(idx),
+                "name": title,
+                "layout": layout,
+                "active": active == "1",
+                "width": int(width),
+                "height": int(height),
+                "panes": panes,
+            }
+        )
     if not windows:
         raise ValueError("Session has no windows")
-    return {"version": 1, "session": name,
-            "saved_at": datetime.now(timezone.utc).isoformat(), "windows": windows}
+    return {
+        "version": 1,
+        "session": name,
+        "saved_at": datetime.now(timezone.utc).isoformat(),
+        "windows": windows,
+    }
+
 
 def save(name):
     data = snapshot(name)
@@ -113,6 +175,7 @@ def save(name):
             os.unlink(temporary)
     print(f"Saved session {name}: {len(data['windows'])} windows -> {path(name)}")
 
+
 def load(name):
     data = json.loads(path(name).read_text(encoding="utf-8"))
     if data.get("version") != 1 or data.get("session") != name:
@@ -126,7 +189,9 @@ def load(name):
         if not isinstance(index, int) or not 0 <= index <= 10000:
             raise ValueError("Invalid window index")
         indices.append(index)
-        if not isinstance(window.get("name"), str) or not isinstance(window.get("layout"), str):
+        if not isinstance(window.get("name"), str) or not isinstance(
+            window.get("layout"), str
+        ):
             raise ValueError("Invalid window metadata")
         panes = window.get("panes")
         if not isinstance(panes, list) or not 1 <= len(panes) <= 100:
@@ -137,13 +202,16 @@ def load(name):
         raise ValueError("Duplicate window index")
     return data
 
+
 def info(name):
     data = load(name)
     print(f"Saved session {name} ({data['saved_at']})")
     for window in sorted(data["windows"], key=lambda w: w["index"]):
         print(f"Window {window['index']}: {window['name']}")
         for pane in window["panes"]:
-            print(f"  Pane {pane['index']}: {pane.get('command') or 'unknown'}  {pane['cwd']}")
+            print(
+                f"  Pane {pane['index']}: {pane.get('command') or 'unknown'}  {pane['cwd']}"
+            )
             if pane.get("argv"):
                 print(f"    argv: {json.dumps(pane['argv'], ensure_ascii=False)}")
 
@@ -153,16 +221,36 @@ def apply(name):
     windows = sorted(data["windows"], key=lambda w: w["index"])
     stage = f"__tload_{os.getpid()}"
     previous = f"__tload_old_{os.getpid()}"
-    old_id = tm("display-message", "-p", "-t", name, "#{session_id}") if exists(name) else None
-    clients = [r[0] for r in records("list-clients", "-t", old_id, fields=("client_tty",))] if old_id else []
+    old_id = (
+        tm("display-message", "-p", "-t", name, "#{session_id}")
+        if exists(name)
+        else None
+    )
+    clients = (
+        [r[0] for r in records("list-clients", "-t", old_id, fields=("client_tty",))]
+        if old_id
+        else []
+    )
     staged = False
     try:
         first = windows[0]
         cwd = first["panes"][0]["cwd"]
         if not Path(cwd).is_dir():
             raise ValueError(f"Missing working directory: {cwd}")
-        tm("new-session", "-d", "-s", stage, "-n", first["name"],
-           "-c", cwd, "-x", first["width"], "-y", first["height"])
+        tm(
+            "new-session",
+            "-d",
+            "-s",
+            stage,
+            "-n",
+            first["name"],
+            "-c",
+            cwd,
+            "-x",
+            first["width"],
+            "-y",
+            first["height"],
+        )
         staged = True
         tm("set-option", "-t", stage, "renumber-windows", "off")
         for count, window in enumerate(windows):
@@ -174,10 +262,23 @@ def apply(name):
                 cwd = window["panes"][0]["cwd"]
                 if not Path(cwd).is_dir():
                     raise ValueError(f"Missing working directory: {cwd}")
-                tm("new-window", "-d", "-t", f"{stage}:{window['index']}",
-                   "-n", window["name"], "-c", cwd)
-                wid = tm("display-message", "-p", "-t",
-                         f"{stage}:{window['index']}", "#{window_id}")
+                tm(
+                    "new-window",
+                    "-d",
+                    "-t",
+                    f"{stage}:{window['index']}",
+                    "-n",
+                    window["name"],
+                    "-c",
+                    cwd,
+                )
+                wid = tm(
+                    "display-message",
+                    "-p",
+                    "-t",
+                    f"{stage}:{window['index']}",
+                    "#{window_id}",
+                )
             tm("set-option", "-w", "-t", wid, "automatic-rename", "off")
             # Pane indexes change as splits are inserted and layouts are applied.
             # Track stable pane IDs so each saved cwd ends up at its saved position.
@@ -188,13 +289,26 @@ def apply(name):
                 if not Path(cwd).is_dir():
                     raise ValueError(f"Missing working directory: {cwd}")
                 pane_ids[pane["index"]] = tm(
-                    "split-window", "-d", "-h", "-P", "-F", "#{pane_id}",
-                    "-t", wid, "-c", cwd)
+                    "split-window",
+                    "-d",
+                    "-h",
+                    "-P",
+                    "-F",
+                    "#{pane_id}",
+                    "-t",
+                    wid,
+                    "-c",
+                    cwd,
+                )
             tm("select-layout", "-t", wid, window["layout"])
             for pane in window["panes"]:
                 index = pane["index"]
-                actual = {int(i): pid for i, pid in records(
-                    "list-panes", "-t", wid, fields=("pane_index", "pane_id"))}
+                actual = {
+                    int(i): pid
+                    for i, pid in records(
+                        "list-panes", "-t", wid, fields=("pane_index", "pane_id")
+                    )
+                }
                 desired_id = pane_ids[index]
                 if actual.get(index) != desired_id:
                     tm("swap-pane", "-d", "-s", desired_id, "-t", actual[index])
@@ -235,6 +349,7 @@ def apply(name):
         if staged and exists(stage):
             tm("kill-session", "-t", stage)
 
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("action", choices=["save", "restore", "apply", "info"])
@@ -252,20 +367,37 @@ def main():
     if args.action == "apply":
         apply(name)
         return
-    print(f"Restore session {name} saved {data['saved_at']} ({len(data['windows'])} windows)?")
+    print(
+        f"Restore session {name} saved {data['saved_at']} ({len(data['windows'])} windows)?"
+    )
     if exists(name):
-        print("WARNING: Existing panes, processes, and unsaved changes will be destroyed.")
-    if any(pane.get("command") in RESTORABLE_COMMANDS for w in data["windows"] for pane in w["panes"]):
-        print("Allowlisted interactive commands will be relaunched without saved arguments.")
-        print("Vim/Neovim may restore project sessions; AI CLI sessions will start fresh.")
+        print(
+            "WARNING: Existing panes, processes, and unsaved changes will be destroyed."
+        )
+    if any(
+        pane.get("command") in RESTORABLE_COMMANDS
+        for w in data["windows"]
+        for pane in w["panes"]
+    ):
+        print(
+            "Allowlisted interactive commands will be relaunched without saved arguments."
+        )
+        print(
+            "Vim/Neovim may restore project sessions; AI CLI sessions will start fresh."
+        )
     if not args.yes and input("Continue? [y/N] ").strip().lower() != "y":
         print("Cancelled.")
         return
     with (DIR / "restore.log").open("a", encoding="utf-8") as log:
-        subprocess.Popen([sys.executable, str(Path(__file__).resolve()), "apply", name],
-                         stdin=subprocess.DEVNULL, stdout=log, stderr=log,
-                         start_new_session=True)
+        subprocess.Popen(
+            [sys.executable, str(Path(__file__).resolve()), "apply", name],
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
+        )
     print(f"Restoring {name}; errors: {DIR / 'restore.log'}")
+
 
 if __name__ == "__main__":
     try:

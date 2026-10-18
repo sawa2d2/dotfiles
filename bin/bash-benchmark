@@ -4,13 +4,13 @@ set -euo pipefail
 COUNT="${1:-10}"
 
 [[ "$COUNT" =~ ^[1-9][0-9]*$ ]] || {
-	echo "Usage: $0 [positive-integer]" >&2
-	exit 2
+  echo "Usage: $0 [positive-integer]" >&2
+  exit 2
 }
 
 for ((i = 1; i <= COUNT; i++)); do
-	{ /usr/bin/time -f '%e' bash -ic 'exit 0' 2>&1 || true; } |
-		awk '/^[0-9]+\.[0-9]+$/ { print $1 * 1000 }'
+  { /usr/bin/time -f '%e' bash -ic 'exit 0' 2>&1 || true; } |
+    awk '/^[0-9]+\.[0-9]+$/ { print $1 * 1000 }'
 done | awk '
 {
     sum += $1

@@ -15,11 +15,11 @@ else
   echo 'Usage: gwt-path [-b|-d] <branch>' >&2
   exit 2
 fi
-if [[ $create_branch == 1 ]] && ! git check-ref-format --branch "$branch" >/dev/null; then
+if [[ $create_branch == 1 ]] && ! git check-ref-format --branch "$branch" > /dev/null; then
   echo "Invalid branch name: $branch" >&2
   exit 1
 fi
-git rev-parse --is-inside-work-tree >/dev/null
+git rev-parse --is-inside-work-tree > /dev/null
 
 # The primary worktree is reserved for main; do not create a second main worktree.
 primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
@@ -49,12 +49,12 @@ fi
 
 if [[ $create_branch == 1 ]]; then
   if git show-ref --verify --quiet "refs/heads/$branch" ||
-     git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
     echo "Branch already exists: $branch" >&2
     exit 1
   fi
 elif ! git show-ref --verify --quiet "refs/heads/$local_branch" &&
-     ! git show-ref --verify --quiet "refs/remotes/$branch"; then
+  ! git show-ref --verify --quiet "refs/remotes/$branch"; then
   echo "Branch not found: $branch (use gwt -b $branch to create it)" >&2
   exit 1
 fi
@@ -94,17 +94,17 @@ origin_url=$(git remote get-url origin) || {
 }
 # Accept SSH scp-style, ssh:// and https:// remotes.
 case "$origin_url" in
-  *://*)
-    remote_path=${origin_url#*://}
-    remote_path=${remote_path#*/}
-    ;;
-  *:*)
-    remote_path=${origin_url#*:}
-    ;;
-  *)
-    echo "Unsupported origin URL: $origin_url" >&2
-    exit 1
-    ;;
+*://*)
+  remote_path=${origin_url#*://}
+  remote_path=${remote_path#*/}
+  ;;
+*:*)
+  remote_path=${origin_url#*:}
+  ;;
+*)
+  echo "Unsupported origin URL: $origin_url" >&2
+  exit 1
+  ;;
 esac
 remote_path=${remote_path%.git}
 remote_path=${remote_path%/}

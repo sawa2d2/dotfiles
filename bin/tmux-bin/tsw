@@ -2,8 +2,8 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-	echo "Usage: tsw <source-window> <target-window>" >&2
-	exit 2
+  echo "Usage: tsw <source-window> <target-window>" >&2
+  exit 2
 fi
 
 tmux swap-window -s "$1" -t "$2"

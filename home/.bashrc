@@ -5,10 +5,10 @@ case $- in
 esac
 
 # Initialize ble.sh (without attaching yet)
-if command -v blesh-share >/dev/null 2>&1; then
-    source "$(blesh-share)/ble.sh" --attach=none
+if command -v blesh-share > /dev/null 2>&1; then
+  source "$(blesh-share)/ble.sh" --attach=none
 elif [[ -f "$HOME/.local/share/blesh/ble.sh" ]]; then
-    source "$HOME/.local/share/blesh/ble.sh" --attach=none
+  source "$HOME/.local/share/blesh/ble.sh" --attach=none
 fi
 
 # Locale
@@ -19,11 +19,11 @@ export LANGUAGE=en_US:en
 export DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 # Load private configuration
 [[ -f "$DOTPATH/private.d/home/.bashrc" ]] &&
-	source "$DOTPATH/private.d/home/.bashrc"
+  source "$DOTPATH/private.d/home/.bashrc"
 
 # Load reusable Bash/Zsh modules after private PATH additions.
 for file in "$DOTPATH"/home/.shell.d/*.sh; do
-    [[ -f "$file" ]] && source "$file"
+  [[ -f "$file" ]] && source "$file"
 done
 unset file
 
@@ -44,16 +44,16 @@ dotfiles_terminal_init
 
 # Bash extensions and widgets
 for file in "$HOME"/.bash.d/*.bash; do
-	[[ -f "$file" ]] && source "$file"
+  [[ -f "$file" ]] && source "$file"
 done
 
 # Command completion
 if ! shopt -oq posix; then
-	if [[ -f /usr/share/bash-completion/bash_completion ]]; then
-		source /usr/share/bash-completion/bash_completion
-	elif [[ -f /etc/bash_completion ]]; then
-		source /etc/bash_completion
-	fi
+  if [[ -f /usr/share/bash-completion/bash_completion ]]; then
+    source /usr/share/bash-completion/bash_completion
+  elif [[ -f /etc/bash_completion ]]; then
+    source /etc/bash_completion
+  fi
 fi
 
 # User aliases
@@ -63,4 +63,4 @@ fi
 dotfiles_tmux_auto_start
 
 # Attach ble.sh after shell initialization
-type ble-attach &>/dev/null && ble-attach
+type ble-attach &> /dev/null && ble-attach

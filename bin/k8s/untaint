@@ -2,11 +2,11 @@
 
 node=$1
 function show_taint() {
-	oc get nodes -o json | jq '.items[] | {name: .metadata.name, taints: .spec.taints}'
+  oc get nodes -o json | jq '.items[] | {name: .metadata.name, taints: .spec.taints}'
 }
 if [[ -z $node ]]; then
-	show_taint
-	exit 1
+  show_taint
+  exit 1
 fi
 oc adm taint nodes $node node.kubernetes.io/out-of-service-
 show_taint

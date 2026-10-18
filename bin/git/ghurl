@@ -2,14 +2,14 @@
 set -euo pipefail
 
 branch=$(git symbolic-ref --quiet --short HEAD) || {
-	echo "Not on a branch." >&2
-	exit 1
+  echo "Not on a branch." >&2
+  exit 1
 }
 
 # Check whether the branch exists on origin.
-if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" >/dev/null; then
-	echo "Remote branch not found: $branch" >&2
-	exit 1
+if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; then
+  echo "Remote branch not found: $branch" >&2
+  exit 1
 fi
 
 # Get URL without launching the browser.
@@ -18,13 +18,13 @@ url=$(gh browse --branch "$branch" --no-browser)
 # Open browser without forwarding its output to the terminal.
 case "$(uname -s)" in
 Linux)
-	nohup xdg-open "$url" >/dev/null 2>&1 </dev/null &
-	;;
+  nohup xdg-open "$url" > /dev/null 2>&1 < /dev/null &
+  ;;
 Darwin)
-	open "$url" >/dev/null 2>&1
-	;;
+  open "$url" > /dev/null 2>&1
+  ;;
 *)
-	echo "Unsupported OS: $(uname -s)" >&2
-	exit 1
-	;;
+  echo "Unsupported OS: $(uname -s)" >&2
+  exit 1
+  ;;
 esac

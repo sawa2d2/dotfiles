@@ -8,9 +8,9 @@
 # ```
 
 podman machine init \
-	--volume /Users:/mnt/Users \
-	--volume /Volumes:/mnt/Volumes \
-	--volume /private:/mnt/private \
-	--volume /tmp:/mnt/tmp \
-	--volume /var/folders:/mnt/var/folders \
-	"$@"
+  --volume /Users:/mnt/Users \
+  --volume /Volumes:/mnt/Volumes \
+  --volume /private:/mnt/private \
+  --volume /tmp:/mnt/tmp \
+  --volume /var/folders:/mnt/var/folders \
+  "$@"

@@ -2,13 +2,13 @@
 
 case "$(uname -s)" in
 Linux)
-	exec xsel --clipboard --output "$@"
-	;;
+  exec xsel --clipboard --output "$@"
+  ;;
 Darwin)
-	exec /usr/bin/pbpaste "$@"
-	;;
+  exec /usr/bin/pbpaste "$@"
+  ;;
 *)
-	echo "Unsupported OS: $(uname -s)" >&2
-	exit 1
-	;;
+  echo "Unsupported OS: $(uname -s)" >&2
+  exit 1
+  ;;
 esac

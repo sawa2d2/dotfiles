@@ -80,10 +80,10 @@ _prompt_command() {
       staged="+"
     fi
     # Compare with the locally known upstream; never fetch during prompt rendering.
-    if counts=$(git rev-list --left-right --count 'HEAD...@{upstream}' 2>/dev/null); then
+    if counts=$(git rev-list --left-right --count 'HEAD...@{upstream}' 2> /dev/null); then
       read -r ahead behind <<< "$counts"
-      (( ahead > 0 )) && divergence="+$ahead"
-      (( behind > 0 )) && divergence+="-$behind"
+      ((ahead > 0)) && divergence="+$ahead"
+      ((behind > 0)) && divergence+="-$behind"
     fi
   fi
 
