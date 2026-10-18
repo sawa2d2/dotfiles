@@ -329,7 +329,8 @@ function! s:ShebangLanguage() abort
 endfunction
 
 function! s:DetectShebangFiletype() abort
-    if expand('%:e') ==# '' && &buftype ==# ''
+    " A recognized shebang takes precedence over filename extensions.
+    if &buftype ==# ''
         let l:lang = <SID>ShebangLanguage()
         if l:lang !=# '' && &filetype !=# l:lang
             execute 'setlocal filetype=' . l:lang
