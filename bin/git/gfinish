@@ -81,16 +81,33 @@ if [[ -n $(git status --porcelain) ]]; then
 fi
 
 git fetch origin main
-# Refuse to integrate a feature branch whose remote history differs.
+# Auto-push only when the feature branch is strictly ahead of its remote.
+# Never force-push, and stop if the remote is ahead or has diverged.
 remote_feature=$(git ls-remote --heads origin "refs/heads/$feature") || {
   echo "Could not check origin/$feature." >&2
   exit 1
 }
 if [[ -n $remote_feature ]]; then
   remote_sha=${remote_feature%%[[:space:]]*}
-  if [[ $(git rev-parse "$feature") != "$remote_sha" ]]; then
-    echo "Local $feature differs from origin/$feature; synchronize it first." >&2
-    exit 1
+  local_sha=$(git rev-parse HEAD)
+  if [[ $local_sha != "$remote_sha" ]]; then
+    # Fetch the exact remote tip so the ancestry check is reliable even
+    # when the remote-tracking ref is stale.
+    git fetch origin "refs/heads/$feature"
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+      echo "Local $feature is behind or diverged from origin/$feature; synchronize it first." >&2
+      exit 1
+    fi
+    echo "Local $feature is ahead of origin/$feature; pushing."
+    git push origin "HEAD:refs/heads/$feature" || {
+      echo "Could not push $feature; stopping." >&2
+      exit 1
+    }
+    pushed_sha=$(git ls-remote --heads origin "refs/heads/$feature")
+    if [[ ${pushed_sha%%[[:space:]]*} != "$local_sha" ]]; then
+      echo "origin/$feature changed after push; stopping." >&2
+      exit 1
+    fi
   fi
 fi
 # Fast-forward local main when it only trails origin/main.
