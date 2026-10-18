@@ -1,2 +1,10 @@
-#!/bin/bash
-realpath -- "$1" | pbcopy
+#!/usr/bin/env bash
+set -euo pipefail
+
+target=${1:-.}
+
+if [[ "$target" != */* ]] && command_path=$(type -P -- "$target"); then
+  target=$command_path
+fi
+
+realpath -e -- "$target" | pbcopy
