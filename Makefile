@@ -2,10 +2,10 @@
 
 # Discover shell scripts by shebang/extension; include rc files without either.
 SHELL_FILES := $(sort $(shell shfmt -f .) $(shell find home -type f \
-	\( -name '.bashrc' -o -name '.bash_aliases' -o -name '.zshrc' \)))
+	\( -name '.bashrc' -o -name '.bash_aliases' -o -name '.zshrc' -o -name '*.zsh' \)))
 # shfmt and ShellCheck do not support Zsh-specific syntax in shared/Zsh modules.
 ZSH_FILES := $(filter %.zsh %.zshrc,$(SHELL_FILES))
-SHARED_FILES := $(filter %/home/.shell.d/% home/.shell.d/%,$(SHELL_FILES))
+SHARED_FILES := $(filter ./home/.shell.d/% home/.shell.d/%,$(SHELL_FILES))
 BASH_FILES := $(filter-out $(ZSH_FILES) $(SHARED_FILES),$(SHELL_FILES))
 # The mixed Bash/Zsh modules are syntax-checked by both interpreters instead.
 # Ruff discovers .py files itself; add extensionless Python entry points by shebang.
