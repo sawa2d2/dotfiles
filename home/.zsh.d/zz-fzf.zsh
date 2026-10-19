@@ -12,6 +12,21 @@ export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }--cycle"
 # Vim-style half-page navigation within fzf.
 export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --bind=ctrl-d:half-page-down,ctrl-u:half-page-up"
 
+# Resolve session colors only when fzf starts; preserve all other colors.
+fzf() {
+    local accent selected colors
+    if [[ -n ${TMUX:-} ]] && (( $+commands[tmux] )); then
+        colors=$(tmux display-message -p '#{@color_accent} #{@color_selected}' 2>/dev/null)
+        accent=${colors%% *}
+        selected=${colors#* }
+        if [[ $accent =~ '^#[[:xdigit:]]{6}$' && $selected =~ '^#[[:xdigit:]]{6}$' ]]; then
+            command fzf --color="bg+:$selected,hl:$accent,prompt:$accent,pointer:$accent" "$@"
+            return $?
+        fi
+    fi
+    command fzf "$@"
+}
+
 fzf-history() {
     local selected
     selected=$(fc -rl 1 | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+//' |

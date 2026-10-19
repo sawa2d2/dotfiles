@@ -24,3 +24,15 @@
 | `red`    | `#da4e58` | `#ed9298` |
 | `green`  | `#24a86a` | `#82cfaa` |
 
+
+## tmux session color
+
+Inside tmux, run `tcolor violet` to change only the current session's status bar.
+The same six variants are supported. Run `tcolor default` to inherit the
+current global color again. New sessions inherit the global color set by
+`./theme/sync <variant>` unless explicitly overridden.
+
+The Bash and Zsh `fzf` functions read tmux's session accent and selected colors
+at launch and override only fzf's highlight, prompt, pointer and selection
+background. Other fzf colors remain global. Commands that execute the fzf
+binary directly (outside the shell function) use the global theme.

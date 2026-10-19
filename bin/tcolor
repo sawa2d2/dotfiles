@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Set the status bar background for a single tmux session.
+set -euo pipefail
+
+usage() {
+  printf 'Usage: tcolor <teal|violet|orange|blue|red|green|default>\n' >&2
+  exit 2
+}
+(($# == 1)) || usage
+
+variant=$1
+case "$variant" in
+  teal|violet|orange|blue|red|green|default) ;;
+  *) usage ;;
+esac
+
+if [[ -z ${TMUX:-} ]]; then
+  printf 'tcolor must run inside tmux.\n' >&2
+  exit 2
+fi
+session=$(tmux display-message -p '#{session_id}')
+[[ -n $session ]] || exit 1
+
+if [[ $variant == default ]]; then
+  # Inherit future global theme/sync changes.
+  tmux set-option -u -t "$session" @color_bg
+  tmux set-option -u -t "$session" @color_accent
+  tmux set-option -u -t "$session" @color_selected
+  tmux set-option -u -t "$session" status-style
+else
+  # Prefer the configured checkout path, even when invoked from a copied bin/.
+  if [[ -n ${DOTPATH:-} ]]; then
+    ROOT=$DOTPATH
+  else
+    script=${BASH_SOURCE[0]}
+    while [[ -L $script ]]; do
+      parent=$(cd -P "$(dirname "$script")" && pwd)
+      script=$(readlink "$script")
+      [[ $script = /* ]] || script="$parent/$script"
+    done
+    ROOT=$(cd "$(dirname "$script")/.." && pwd -P)
+  fi
+  THEME_VARIANT=$variant
+  source "$ROOT/theme/colors.sh"
+  tmux set-option -t "$session" @color_bg "$COLOR_BG"
+  tmux set-option -t "$session" @color_accent "$COLOR_ACCENT"
+  tmux set-option -t "$session" @color_selected "$COLOR_SELECTED"
+  # Global status-style uses -F and is already expanded, so override locally.
+  tmux set-option -F -t "$session" status-style 'bg=#{@color_bg},fg=#{@color_fg}'
+fi
+
+# Refresh pre-rendered multi-row window labels with the new background.
+bash "$(dirname "${BASH_SOURCE[0]}")/tmux-bin/tmux-status-windows" --sync
+tmux refresh-client -S

@@ -23,6 +23,7 @@ cat > "$ROOT/theme/generated/tmux.theme.conf" <<TMUX
 set -g @color_bg '$COLOR_BG'
 set -g @color_fg '$COLOR_FG'
 set -g @color_accent '$COLOR_ACCENT'
+set -g @color_selected '$COLOR_SELECTED'
 set -g @color_active '$COLOR_ACTIVE'
 set -g @color_inactive '$COLOR_INACTIVE'
 set -g @color_white '$COLOR_WHITE'
