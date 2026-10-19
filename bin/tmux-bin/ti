@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 1)) || [[ ! $1 =~ ^[0-9]+$ ]]; then
+  echo 'Usage: ti <window-index>' >&2
+  exit 2
+fi
+
+target=$((10#$1))
+session=$(tmux display-message -p '#{session_id}')
+source_id=$(tmux display-message -p '#{window_id}')
+current=$(tmux display-message -p '#{window_index}')
+
+if ! tmux list-windows -t "$session" -F '#{window_index}' | grep -Fxq -- "$target"; then
+  echo "No window at index: $target" >&2
+  exit 1
+fi
+
+if ((target == current)); then
+  exit 0
+elif ((target < current)); then
+  tmux move-window -b -s "$source_id" -t "$session:$target"
+else
+  tmux move-window -a -s "$source_id" -t "$session:$target"
+fi
+
+# Explicitly compact window indices after inserting at a new position.
+# Insertion with -a/-b can leave gaps despite renumber-windows being enabled.
+tmux move-window -r -t "$session"
+
+# The multi-row status bar stores pre-rendered labels.
+bash "$(dirname "$0")/tmux-status-windows" --sync
