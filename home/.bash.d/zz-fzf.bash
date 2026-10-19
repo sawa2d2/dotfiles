@@ -7,6 +7,8 @@ if [[ ${FZF_DEFAULT_OPTS:-} == *--color=* ]]; then
   export FZF_DEFAULT_OPTS
 fi
 export FZF_DEFAULT_OPTS_FILE="$DOTPATH/theme/generated/fzf.opts"
+# Wrap from last to first candidate (and vice versa).
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }--cycle"
 
 fzf_search_history() {
   local selected
