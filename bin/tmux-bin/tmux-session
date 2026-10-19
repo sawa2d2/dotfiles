@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -80,8 +81,61 @@ def exists(name):
     )
 
 
+def macos_process_rows(output, foreground):
+    """Return foreground-group process arguments from macOS ps output."""
+    candidates = []
+    for line in output.splitlines():
+        parts = line.strip().split(None, 2)
+        if len(parts) != 3:
+            continue
+        try:
+            pid, pgid = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        if pgid != foreground:
+            continue
+        try:
+            argv = shlex.split(parts[2])
+        except ValueError:
+            continue
+        if argv:
+            candidates.append((pid, argv))
+    return sorted(candidates, key=lambda item: (item[0] != foreground, item[0]))
+
+
+def macos_foreground_process(pane_pid, command):
+    """macOS: read foreground process group and arguments using system ps."""
+    try:
+        group = subprocess.run(
+            ["ps", "-p", str(pane_pid), "-o", "tpgid="],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        foreground = int(group.stdout.strip())
+        if foreground <= 0:
+            return {"command": command, "argv": None}
+        listing = subprocess.run(
+            ["ps", "-ww", "-axo", "pid=,pgid=,command="],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for pid, argv in macos_process_rows(listing.stdout, foreground):
+            return {
+                "command": Path(argv[0].lstrip("-")).name if pid == pane_pid else command,
+                "argv": argv,
+            }
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        pass
+    return {"command": command, "argv": None}
+
+
 def foreground_process(pane_pid, command):
-    """Linux: argv of the terminal foreground process-group leader, if readable."""
+    """Read the pane foreground process, preserving the snapshot schema."""
+    if sys.platform == "darwin":
+        return macos_foreground_process(pane_pid, command)
+    # Linux: argv of the terminal foreground process-group leader, if readable.
     try:
         stat = Path(f"/proc/{pane_pid}/stat").read_text()
         fields = stat[stat.rfind(")") + 2 :].split()
