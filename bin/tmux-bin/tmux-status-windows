@@ -22,7 +22,16 @@ if [[ ${1:-} == --sync && $# == 1 ]]; then
     _trace_event client_begin
     [[ -n $session && $width =~ ^[0-9]+$ ]] || continue
     _trace_event rows_call_begin
-    rows=$("$0" --rows "$session" "$width") || continue
+    # Redirect the child's stdout to a regular file: command substitution
+    # can wait for EOF from unrelated descendants that inherited its pipe.
+    rows_file=$(mktemp "${TMPDIR:-/tmp}/tmux-status-rows.XXXXXXXX") || exit 1
+    if ! "$0" --rows "$session" "$width" > "$rows_file"; then
+      rm -f "$rows_file"
+      continue
+    fi
+    IFS= read -r rows < "$rows_file" || rows=
+    rm -f "$rows_file"
+    [[ $rows =~ ^[1-5]$ ]] || continue
     _trace_event rows_call_end
     _trace_event status_read_begin
     current=$(tmux show-options -v -t "$session" status 2> /dev/null) || continue
