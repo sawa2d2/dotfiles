@@ -13,7 +13,7 @@ from urllib.parse import quote
 
 DIR = Path.home() / ".local/state/tmux/sessions"
 
-# Only relaunch explicitly approved interactive applications, without saved argv.
+# Only relaunch explicitly approved interactive applications.
 RESTORABLE_COMMANDS = frozenset(
     {
         "vi",
@@ -25,6 +25,28 @@ RESTORABLE_COMMANDS = frozenset(
     }
 )
 
+
+
+def restorable_command(pane):
+    """Return an explicitly allowed command line, never arbitrary saved argv."""
+    command = pane.get("command")
+    if command in RESTORABLE_COMMANDS:
+        return command
+
+    argv = pane.get("argv")
+    if (
+        command == "node"
+        and isinstance(argv, list)
+        and len(argv) >= 2
+        and all(isinstance(arg, str) for arg in argv)
+        and Path(argv[0]).name in {"node", "node.exe"}
+        and Path(argv[1]).name == "bob"
+    ):
+        # Only restore the specific known Bob resume invocation.
+        if argv[2:] == ["chat", "--resume", "latest", "--yolo"]:
+            return "bob chat --resume latest --yolo"
+        return "bob"
+    return None
 
 def tm(*args):
     p = subprocess.run(["tmux", *map(str, args)], capture_output=True, text=True)
@@ -316,14 +338,14 @@ def apply(name):
             active_panes = [p for p in window["panes"] if p.get("active")]
             if active_panes:
                 tm("select-pane", "-t", f"{wid}.{active_panes[0]['index']}")
-        # Relaunch only allowlisted interactive commands, never saved arguments.
+        # Relaunch only allowlisted interactive commands and one known Bob resume invocation.
         # Vim/Neovim may restore project sessions; AI CLIs start fresh.
         for window in windows:
             target = f"{stage}:{window['index']}"
             wid = tm("display-message", "-p", "-t", target, "#{window_id}")
             for pane in window["panes"]:
-                command = pane.get("command")
-                if command in RESTORABLE_COMMANDS:
+                command = restorable_command(pane)
+                if command:
                     tm("send-keys", "-t", f"{wid}.{pane['index']}", "-l", command)
                     tm("send-keys", "-t", f"{wid}.{pane['index']}", "Enter")
         selected = [w for w in windows if w.get("active")]
@@ -375,7 +397,7 @@ def main():
             "WARNING: Existing panes, processes, and unsaved changes will be destroyed."
         )
     if any(
-        pane.get("command") in RESTORABLE_COMMANDS
+        restorable_command(pane) is not None
         for w in data["windows"]
         for pane in w["panes"]
     ):
