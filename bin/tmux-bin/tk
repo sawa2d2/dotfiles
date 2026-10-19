@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Invoked only after tmux's confirm-before accepts the deletion.
+if (($# == 3)) && [[ $1 == --confirmed ]]; then
+  target_num=$2
+  client_tty=$3
+  [[ $target_num =~ ^[0-9]+$ && $client_tty == /dev/* ]] || exit 2
+  printf -v target '$%s' "$target_num"
+
+  # Only redirect the invoking client when deleting its current session.
+  client_session=$(tmux display-message -p -c "$client_tty" '#{session_id}') || exit 1
+  if [[ $client_session == "$target" ]]; then
+    fallback=''
+    # Session 0 is preferred only when it is detached.
+    while IFS='|' read -r candidate name attached; do
+      if [[ $candidate != "$target" && $attached == 0 ]]; then
+        if [[ $name == 0 ]]; then
+          fallback=$candidate
+          break
+        fi
+        [[ -n $fallback ]] || fallback=$candidate
+      fi
+    done < <(tmux list-sessions -F '#{session_id}|#{session_name}|#{session_attached}')
+
+    created=''
+    if [[ -z $fallback ]]; then
+      # Keep the client inside tmux even when no detached session exists.
+      fallback=$(tmux new-session -d -P -F '#{session_id}') || exit 1
+      created=$fallback
+    fi
+    if ! tmux switch-client -c "$client_tty" -t "$fallback"; then
+      [[ -z $created ]] || tmux kill-session -t "$created" || true
+      exit 1
+    fi
+  fi
+  exec tmux kill-session -t "$target"
+fi
+
+if (($# > 1)) || [[ ${1:-} == -* ]]; then
+  echo 'Usage: tk [session]' >&2
+  exit 2
+fi
+
+if (($# == 0)) && [[ -z ${TMUX:-} ]]; then
+  echo 'Usage: tk <session> (required outside tmux)' >&2
+  exit 2
+fi
+
+# Resolve the target before prompting, using its immutable session ID.
+if (($# == 0)); then
+  target=$(tmux display-message -p '#{session_id}')
+  name=$(tmux display-message -p '#{session_name}')
+else
+  # Match session names exactly; display-message -t '=name' can resolve a
+  # window target and return an empty session_id for numeric names.
+  target=''
+  name=''
+  while IFS='|' read -r candidate_name candidate_id; do
+    if [[ $candidate_name == "$1" ]]; then
+      name=$candidate_name
+      target=$candidate_id
+      break
+    fi
+  done < <(tmux list-sessions -F '#{session_name}|#{session_id}')
+  if [[ -z $target ]]; then
+    echo "Session not found: $1" >&2
+    exit 1
+  fi
+fi
+
+if [[ -n ${TMUX:-} ]]; then
+  client_tty=$(tmux display-message -p '#{client_tty}')
+  script=$(realpath "$0")
+  # Pass the numeric ID: a literal $10 inside run-shell can be expanded by a shell.
+  printf -v command 'run-shell "bash %q --confirmed %q %q"' "$script" "${target#\$}" "$client_tty"
+  exec tmux confirm-before -p "Kill session $name? (y/n)" "$command"
+fi
+
+if [[ ! -t 0 ]]; then
+  echo 'Interactive confirmation requires a terminal.' >&2
+  exit 1
+fi
+read -r -p "Kill session $name? [y/N] " answer
+[[ $answer == y || $answer == Y ]] || exit 0
+exec tmux kill-session -t "$target"

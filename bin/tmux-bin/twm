@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# != 1)) || [[ -z $1 ]]; then
+  echo 'Usage: twm <destination-session>' >&2
+  exit 2
+fi
+
+# Resolve an exact session name. "=name" is a window target in tmux,
+# and can yield an empty session_id for numeric names.
+destination=''
+while IFS='|' read -r candidate_name candidate_id; do
+  if [[ $candidate_name == "$1" ]]; then
+    destination=$candidate_id
+    break
+  fi
+done < <(tmux list-sessions -F '#{session_name}|#{session_id}')
+if [[ -z $destination ]]; then
+  echo "Session not found: $1" >&2
+  exit 1
+fi
+
+source_session=$(tmux display-message -p '#{session_id}')
+if [[ $destination == "$source_session" ]]; then
+  echo 'Source and destination sessions are the same.' >&2
+  exit 1
+fi
+
+window=$(tmux display-message -p '#{window_id}')
+client_tty=$(tmux display-message -p '#{client_tty}')
+
+# Move the invoking client first. This prevents it from exiting when the
+# source session disappears after its final window is moved.
+tmux switch-client -c "$client_tty" -t "$destination"
+
+# Move the original window, preserving all panes and running processes.
+# A missing index lets tmux pick the next available window index.
+tmux move-window -s "$window" -t "$destination:"
+tmux select-window -t "$window"
+
+# Compact indices in both sessions. The source session may disappear when
+# moving its last window, so renumber it only while it still exists.
+tmux move-window -r -t "$destination"
+if tmux has-session -t "$source_session" 2>/dev/null; then
+  tmux move-window -r -t "$source_session"
+fi
+
+# The custom status bar caches rendered labels per session.
+bash "$(dirname "$0")/tmux-status-windows" --sync

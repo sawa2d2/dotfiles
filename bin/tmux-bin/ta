@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (($# > 1)) || [[ ${1:-} == -* ]]; then
+  echo 'Usage: ta [session]' >&2
+  exit 2
+fi
+
+if (($# == 1)); then
+  session=$1
+else
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo 'ta: fzf is required for interactive session selection' >&2
+    exit 1
+  fi
+
+  # Use a fixed delimiter so names with spaces remain valid.
+  listing=$(tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_attached}' | \
+    awk -F '|' 'BEGIN { OFS="\t" } { print $1, $2 " windows", ($3 == 0 ? "detached" : "attached") }')
+  if [[ -z $listing ]]; then
+    echo 'ta: no sessions available' >&2
+    exit 1
+  fi
+  selected=$(printf '%s\n' "$listing" | fzf --delimiter=$'\t' --with-nth=1,2,3 --prompt='session> ') || exit 0
+  [[ -n $selected ]] || exit 0
+  session=${selected%%$'\t'*}
+fi
+
+if [[ -n ${TMUX:-} ]]; then
+  exec tmux switch-client -t "=$session"
+else
+  exec tmux attach-session -t "=$session"
+fi
