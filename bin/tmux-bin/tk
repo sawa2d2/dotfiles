@@ -12,16 +12,22 @@ if (($# == 3)) && [[ $1 == --confirmed ]]; then
   client_session=$(tmux display-message -p -c "$client_tty" '#{session_id}') || exit 1
   if [[ $client_session == "$target" ]]; then
     fallback=''
-    # Session 0 is preferred only when it is detached.
-    while IFS='|' read -r candidate name attached; do
-      if [[ $candidate != "$target" && $attached == 0 ]]; then
-        if [[ $name == 0 ]]; then
+    # Prefer the nearest detached session to the right in tmux's list.
+    # If none exists, use the nearest detached session to the left.
+    previous=''
+    passed_current=0
+    while IFS='|' read -r candidate attached; do
+      if [[ $candidate == "$target" ]]; then
+        passed_current=1
+      elif [[ $attached == 0 ]]; then
+        if ((passed_current)); then
           fallback=$candidate
           break
         fi
-        [[ -n $fallback ]] || fallback=$candidate
+        previous=$candidate
       fi
-    done < <(tmux list-sessions -F '#{session_id}|#{session_name}|#{session_attached}')
+    done < <(tmux list-sessions -F '#{session_id}|#{session_attached}')
+    [[ -n $fallback ]] || fallback=$previous
 
     created=''
     if [[ -z $fallback ]]; then
