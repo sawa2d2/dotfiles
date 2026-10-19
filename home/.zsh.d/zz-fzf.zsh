@@ -19,7 +19,8 @@ fzf() {
         colors=$(tmux display-message -p '#{@color_accent} #{@color_selected}' 2>/dev/null)
         accent=${colors%% *}
         selected=${colors#* }
-        if [[ $accent =~ '^#[[:xdigit:]]{6}$' && $selected =~ '^#[[:xdigit:]]{6}$' ]]; then
+        # Zsh treats quoted =~ patterns differently from Bash; use glob matching.
+        if [[ $accent == \#?????? && $selected == \#?????? ]]; then
             command fzf --color="bg+:$selected,hl:$accent,prompt:$accent,pointer:$accent" "$@"
             return $?
         fi
