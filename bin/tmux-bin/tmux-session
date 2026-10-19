@@ -175,6 +175,29 @@ def foreground_process(pane_pid, command):
     return {"command": command, "argv": None}
 
 
+
+def snapshot_pane(index, cwd, active, command, pid, pane_id):
+    """Preserve unloaded pane metadata, including cwd, across new snapshots."""
+    p = subprocess.run(
+        ["tmux", "show-options", "-p", "-v", "-t", pane_id, "@tload_snapshot"],
+        capture_output=True, text=True,
+    )
+    if p.returncode == 0 and p.stdout.strip():
+        original = json.loads(p.stdout)
+        return {
+            **original,
+            "index": int(index),
+            "active": active == "1",
+        }
+    return {
+        "index": int(index),
+        "cwd": cwd,
+        "active": active == "1",
+        **foreground_process(pid, command),
+    }
+
+
+
 def snapshot(name):
     sid = tm("display-message", "-p", "-t", name, "#{session_id}")
     windows = []
@@ -193,13 +216,8 @@ def snapshot(name):
         ),
     ):
         panes = [
-            {
-                "index": int(idx),
-                "cwd": cwd,
-                "active": active == "1",
-                **foreground_process(int(pid), command),
-            }
-            for idx, cwd, active, command, pid in records(
+            snapshot_pane(idx, cwd, active, command, int(pid or 0), pane_id)
+            for idx, cwd, active, command, pid, pane_id in records(
                 "list-panes",
                 "-t",
                 wid,
@@ -209,6 +227,7 @@ def snapshot(name):
                     "pane_active",
                     "pane_current_command",
                     "pane_pid",
+                    "pane_id",
                 ),
             )
         ]
@@ -292,6 +311,42 @@ def info(name):
                 print(f"    argv: {json.dumps(pane['argv'], ensure_ascii=False)}")
 
 
+
+def activate(window_id):
+    """Start saved panes once when a restored window is selected."""
+    p = subprocess.run(
+        ["tmux", "show-options", "-w", "-v", "-t", window_id, "@tload_pending"],
+        capture_output=True, text=True,
+    )
+    if p.returncode or p.stdout.strip() != "1":
+        return
+    pane_ids = [pid for (pid,) in records(
+        "list-panes", "-t", window_id, fields=("pane_id",)
+    )]
+    # Claim before respawning to avoid duplicate invocation via hooks.
+    tm("set-option", "-w", "-t", window_id, "@tload_pending", "0")
+    for pane_id in pane_ids:
+        def get_option(key):
+            result = subprocess.run(
+                ["tmux", "show-options", "-p", "-v", "-t", pane_id, key],
+                capture_output=True, text=True,
+            )
+            return result.stdout.rstrip("\n") if result.returncode == 0 else None
+
+        cwd = get_option("@tload_cwd")
+        command = get_option("@tload_command")
+        if not cwd or not Path(cwd).is_dir():
+            raise ValueError(f"Missing working directory for {pane_id}: {cwd}")
+        shell = tm("show-options", "-g", "-v", "default-shell")
+        tm("respawn-pane", "-k", "-c", cwd, "-t", pane_id, shell)
+        if command:
+            tm("send-keys", "-t", pane_id, "-l", command)
+            tm("send-keys", "-t", pane_id, "Enter")
+        tm("set-option", "-p", "-u", "-t", pane_id, "@tload_cwd")
+        tm("set-option", "-p", "-u", "-t", pane_id, "@tload_command")
+        tm("set-option", "-p", "-u", "-t", pane_id, "@tload_snapshot")
+    tm("set-option", "-w", "-u", "-t", window_id, "@tload_pending")
+
 def apply(name):
     data = load(name)
     windows = sorted(data["windows"], key=lambda w: w["index"])
@@ -326,6 +381,7 @@ def apply(name):
             first["width"],
             "-y",
             first["height"],
+            "sleep 2147483647",
         )
         staged = True
         tm("set-option", "-t", stage, "renumber-windows", "off")
@@ -347,6 +403,7 @@ def apply(name):
                     window["name"],
                     "-c",
                     cwd,
+                    "sleep 2147483647",
                 )
                 wid = tm(
                     "display-message",
@@ -375,6 +432,7 @@ def apply(name):
                     wid,
                     "-c",
                     cwd,
+                    "sleep 2147483647",
                 )
             tm("select-layout", "-t", wid, window["layout"])
             for pane in window["panes"]:
@@ -392,19 +450,30 @@ def apply(name):
             active_panes = [p for p in window["panes"] if p.get("active")]
             if active_panes:
                 tm("select-pane", "-t", f"{wid}.{active_panes[0]['index']}")
-        # Relaunch only allowlisted interactive commands and one known Bob resume invocation.
-        # Vim/Neovim may restore project sessions; AI CLIs start fresh.
+        # Store the approved commands and directories on stable tmux pane IDs.
         for window in windows:
-            target = f"{stage}:{window['index']}"
-            wid = tm("display-message", "-p", "-t", target, "#{window_id}")
+            wid = tm("display-message", "-p", "-t",
+                     f"{stage}:{window['index']}", "#{window_id}")
+            actual = {
+                int(idx): pane_id for idx, pane_id in records(
+                    "list-panes", "-t", wid, fields=("pane_index", "pane_id")
+                )
+            }
             for pane in window["panes"]:
-                command = restorable_command(pane)
-                if command:
-                    tm("send-keys", "-t", f"{wid}.{pane['index']}", "-l", command)
-                    tm("send-keys", "-t", f"{wid}.{pane['index']}", "Enter")
+                pane_id = actual[pane["index"]]
+                tm("set-option", "-p", "-t", pane_id, "@tload_snapshot",
+                   json.dumps(pane, ensure_ascii=False))
+                tm("set-option", "-p", "-t", pane_id, "@tload_cwd", pane["cwd"])
+                tm("set-option", "-p", "-t", pane_id, "@tload_command",
+                   restorable_command(pane) or "")
+            tm("set-option", "-w", "-t", wid, "@tload_pending", "1")
         selected = [w for w in windows if w.get("active")]
         if selected:
             tm("select-window", "-t", f"{stage}:{selected[0]['index']}")
+        active_window = selected[0] if selected else windows[0]
+        active_id = tm("display-message", "-p", "-t",
+                       f"{stage}:{active_window['index']}", "#{window_id}")
+        activate(active_id)
         if old_id:
             if tm("display-message", "-p", "-t", old_id, "#{session_name}") != name:
                 raise RuntimeError("Session name changed during restoration")
@@ -428,10 +497,15 @@ def apply(name):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("action", choices=["save", "restore", "apply", "info"])
+    p.add_argument("action", choices=["save", "restore", "apply", "info", "activate"])
     p.add_argument("session", nargs="?", help="defaults to current session")
     p.add_argument("-y", "--yes", action="store_true", help="skip confirmation")
     args = p.parse_args()
+    if args.action == "activate":
+        if not args.session:
+            raise ValueError("activate requires a window ID")
+        activate(args.session)
+        return
     name = args.session or current()
     if args.action == "save":
         save(name)
