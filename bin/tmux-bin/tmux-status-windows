@@ -106,9 +106,11 @@ while IFS=
     # Keep layout cached, but resolve the active window during tmux's
     # status-format expansion. A delayed --sync cannot stale the highlight.
     selected="#{==:#{window_id},$window_id}"
-    printf '#[fg=#{?%s,%s,%s},bg=#{?%s,%s,%s},#{?%s,bold,nobold}]%s' \
-      "$selected" "$active_fg" "$inactive_fg" \
-      "$selected" "$active_bg" "$inactive_bg" "$selected" "$entry"
+    # A conditional must emit the whole style. Nested formats inside #[...]
+    # are not evaluated as color values by tmux.
+    printf '#{?%s,#[fg=%s#,bg=%s#,bold],#[fg=%s#,bg=%s#,nobold]}%s' \
+      "$selected" "$active_fg" "$active_bg" \
+      "$inactive_fg" "$inactive_bg" "$entry"
   fi
   used=$((used + length))
 done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}')
