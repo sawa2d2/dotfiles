@@ -87,6 +87,12 @@ other_width=$((width > 3 ? width - 3 : 1))
 
 if [[ $requested_row == --rows ]]; then
   _trace_event rows_start
+  rows_input=$(mktemp "${TMPDIR:-/tmp}/tmux-status-list.XXXXXXXX") || exit 1
+  if ! tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}' > "$rows_input"; then
+    rm -f "$rows_input"
+    exit 1
+  fi
+  _trace_event rows_list_done
   row=0
   used=0
   while IFS= read -r label; do
@@ -100,12 +106,13 @@ if [[ $requested_row == --rows ]]; then
       length=$((${#label} + 2))
     fi
     used=$((used + length))
-  done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}')
-  _trace_event rows_list_done
+  done < "$rows_input"
+  rm -f "$rows_input"
+  _trace_event rows_parse_done
   ((row > 4)) && row=4
   _trace_event rows_before_print
   printf '%s\n' "$((row + 1))"
-  _trace_event sync_end
+  _trace_event rows_end
   exit 0
 fi
 
