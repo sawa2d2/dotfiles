@@ -9,6 +9,8 @@ fi
 export FZF_DEFAULT_OPTS_FILE="$DOTPATH/theme/generated/fzf.opts"
 # Wrap from last to first candidate (and vice versa).
 export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }--cycle"
+# Vim-style half-page navigation within fzf.
+export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --bind=ctrl-d:half-page-down,ctrl-u:half-page-up"
 
 fzf-history() {
     local selected
