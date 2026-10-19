@@ -85,7 +85,36 @@ bar_bg=${bar_bg:-default}
 
 row=0
 used=0
-while IFS=$'\t' read -r label active; do
+while IFS=
+  [[ -n $label ]] || continue
+  entry=" $label "
+  length=${#entry}
+  ((used > 0)) && length=$((length + 1))
+  limit=$((row == 0 ? first_width : other_width))
+
+  if ((used > 0 && used + length > limit)); then
+    row=$((row + 1))
+    used=0
+    length=${#entry}
+  fi
+  ((row > 4)) && break
+
+  if ((row == requested_row)); then
+    if ((used > 0)); then
+      printf '#[bg=%s] ' "$bar_bg"
+    fi
+    # Keep layout cached, but resolve the active window during tmux's
+    # status-format expansion. A delayed --sync cannot stale the highlight.
+    selected="#{==:#{window_id},$window_id}"
+    printf '#[fg=#{?%s,%s,%s},bg=#{?%s,%s,%s},#{?%s,bold,nobold}]%s' \
+      "$selected" "$active_fg" "$inactive_fg" \
+      "$selected" "$active_bg" "$inactive_bg" "$selected" "$entry"
+  fi
+  used=$((used + length))
+done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}')
+
+printf '#[default]'
+\t' read -r label window_id; do
   [[ -n $label ]] || continue
   entry=" $label "
   length=${#entry}
