@@ -2,8 +2,10 @@
 set -euo pipefail
 
 sessions=()
+count=0
 while IFS= read -r session; do
   sessions+=("$session")
+  ((count += 1))
 done < <(
   tmux list-sessions -F '#{session_id} #{session_name}' |
     awk '$2 ~ /^[0-9]+$/ { print }' |
@@ -12,11 +14,11 @@ done < <(
 )
 
 # Rename to temporary names to avoid collisions.
-for i in "${!sessions[@]}"; do
+for ((i = 0; i < count; i++)); do
   tmux rename-session -t "${sessions[i]}" "__renumber_${$}_$i"
 done
 
 # Assign sequential names starting at 0.
-for i in "${!sessions[@]}"; do
+for ((i = 0; i < count; i++)); do
   tmux rename-session -t "${sessions[i]}" "$i"
 done
