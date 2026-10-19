@@ -60,7 +60,7 @@ gbr() {
 
 gwt() {
   _fzf_git_require_repo || return 1
-  local branch path selected
+  local branch worktree_dir selected
   if [[ ${1:-} == -d ]] && (($# <= 2)); then
     if (($# == 2)); then
       branch=$2
@@ -82,21 +82,21 @@ gwt() {
       [[ -n $selected ]] || return
       branch=${selected%%|*}
     fi
-    path=$(gwt-path -d "$branch") || return
-    cd -- "$path"
+    worktree_dir=$(gwt-path -d "$branch") || return
+    cd -- "$worktree_dir"
     return
   fi
   if (($# == 2)) && [[ $1 == -b ]]; then
-    path=$(gwt-path -b "$2") || return
+    worktree_dir=$(gwt-path -b "$2") || return
   elif (($# == 1)) && [[ $1 != -* ]]; then
-    path=$(gwt-path "$1") || return
+    worktree_dir=$(gwt-path "$1") || return
   elif (($# == 0)); then
     branch=$(_fzf_git_select_branch) || return
     [[ -n $branch ]] || return
-    path=$(gwt-path "$branch") || return
+    worktree_dir=$(gwt-path "$branch") || return
   else
     echo 'Usage: gwt [-b|-d] [branch]' >&2
     return 2
   fi
-  cd -- "$path"
+  cd -- "$worktree_dir"
 }
