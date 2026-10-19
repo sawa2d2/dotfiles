@@ -3,7 +3,11 @@ set -euo pipefail
 
 create_branch=0
 delete_worktree=0
-if (($# == 2)) && [[ $1 == -d ]]; then
+rename_worktree=0
+if (($# == 2)) && [[ $1 == -m ]]; then
+  rename_worktree=1
+  branch=$2
+elif (($# == 2)) && [[ $1 == -d ]]; then
   delete_worktree=1
   branch=$2
 elif (($# == 2)) && [[ $1 == -b ]]; then
@@ -12,10 +16,10 @@ elif (($# == 2)) && [[ $1 == -b ]]; then
 elif (($# == 1)) && [[ $1 != -* ]]; then
   branch=$1
 else
-  echo 'Usage: gwt-path [-b|-d] <branch>' >&2
+  echo 'Usage: gwt-path [-b|-d|-m] <branch>' >&2
   exit 2
 fi
-if [[ $create_branch == 1 ]] && ! git check-ref-format --branch "$branch" > /dev/null; then
+if [[ $create_branch == 1 || $rename_worktree == 1 ]] && ! git check-ref-format --branch "$branch" > /dev/null; then
   echo "Invalid branch name: $branch" >&2
   exit 1
 fi
@@ -28,6 +32,50 @@ if [[ $primary_branch != main ]]; then
   echo "gwt requires the primary worktree ($primary) to be on main (currently: ${primary_branch:-detached HEAD})." >&2
   echo "Switch the primary worktree to main before using gwt." >&2
   exit 1
+fi
+
+if [[ $rename_worktree == 1 ]]; then
+  current=$(git rev-parse --show-toplevel)
+  if [[ $current == "$primary" ]]; then
+    echo 'Cannot rename the primary worktree.' >&2
+    exit 1
+  fi
+  old_branch=$(git symbolic-ref --quiet --short HEAD) || {
+    echo 'Cannot rename a detached HEAD worktree.' >&2
+    exit 1
+  }
+  if [[ $branch == "$old_branch" ]]; then
+    printf '%s\n' "$current"
+    exit 0
+  fi
+  if git show-ref --verify --quiet "refs/heads/$branch"; then
+    echo "Branch already exists: $branch" >&2
+    exit 1
+  fi
+  # Require the standard gwt directory layout so renaming cannot relocate
+  # an arbitrary worktree or accidentally reuse a mismatched directory.
+  if [[ $current != */"$old_branch" ]]; then
+    echo "Worktree path does not match its branch: $current ($old_branch)" >&2
+    exit 1
+  fi
+  root=${current%/"$old_branch"}
+  target="$root/$branch"
+  if [[ -e $target || -L $target ]]; then
+    echo "Destination already exists: $target" >&2
+    exit 1
+  fi
+  mkdir -p -- "$(dirname "$target")"
+  # Move first: Git checks that the worktree can be relocated. Roll back
+  # the directory move if the subsequent branch rename unexpectedly fails.
+  git worktree move "$current" "$target" >&2
+  if ! git -C "$target" branch -m "$old_branch" "$branch" >&2; then
+    git worktree move "$target" "$current" >&2 || {
+      echo "Rollback failed; worktree is at: $target" >&2
+    }
+    exit 1
+  fi
+  printf '%s\n' "$target"
+  exit 0
 fi
 
 if [[ $delete_worktree == 1 && $branch == . ]]; then

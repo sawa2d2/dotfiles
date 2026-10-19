@@ -86,7 +86,9 @@ gwt() {
     cd -- "$worktree_dir"
     return
   fi
-  if (($# == 2)) && [[ $1 == -b ]]; then
+  if (($# == 2)) && [[ $1 == -m ]]; then
+    worktree_dir=$(gwt-path -m "$2") || return
+  elif (($# == 2)) && [[ $1 == -b ]]; then
     worktree_dir=$(gwt-path -b "$2") || return
   elif (($# == 1)) && [[ $1 != -* ]]; then
     worktree_dir=$(gwt-path "$1") || return
@@ -95,7 +97,7 @@ gwt() {
     [[ -n $branch ]] || return
     worktree_dir=$(gwt-path "$branch") || return
   else
-    echo 'Usage: gwt [-b|-d] [branch]' >&2
+    echo 'Usage: gwt [-b|-d|-m] [branch]' >&2
     return 2
   fi
   cd -- "$worktree_dir"
