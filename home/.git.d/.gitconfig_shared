@@ -14,7 +14,6 @@
     sta = status -sb -uall
     df = diff
     dfh = diff HEAD
-    dfm = diff origin/main..HEAD
     dfn = "!f() { git diff \"HEAD~${1:-1}\" \"HEAD~$((${1:-1}-1))\"; }; f"
     dff = "!f() { n=${1:-1}; git diff --name-only \"HEAD~$n\" \"HEAD~$((n-1))\"; }; f"
     t = tag
@@ -41,6 +40,10 @@
     fk = fork
     gr = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
     gra = log --graph --all --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit --date=relative
+
+[pager]
+    # Page the whole multi-command output of git-dfm once, through delta.
+    dfm = true
 
 [push]
     default = current

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Show everything this branch changes since it forked from origin/main, like a
+# PR view: commits, staged, unstaged and untracked files. Diffing against the
+# merge base keeps newer origin/main commits out without merging them first.
+set -o pipefail
+
+if (($# != 0)); then
+  printf 'Usage: git dfm\n' >&2
+  exit 2
+fi
+
+base=$(git merge-base origin/main HEAD) || exit $?
+
+git diff "$base" || exit $?
+
+while IFS= read -r -d '' file; do
+  git diff --no-index -- /dev/null "$file"
+  status=$?
+  # --no-index returns 1 when files differ; anything higher is an error.
+  if ((status > 1)); then
+    exit "$status"
+  fi
+done < <(git ls-files --others --exclude-standard -z)
