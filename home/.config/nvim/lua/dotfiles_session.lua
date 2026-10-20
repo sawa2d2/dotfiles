@@ -129,6 +129,11 @@ function M.setup()
     branch = false,
   })
 
+  vim.keymap.set("n", "<leader>s", function()
+    vim.cmd.cd(vim.fn.fnameescape(root))
+    persistence.save()
+  end, { silent = true, desc = "Save session" })
+
   vim.keymap.set("n", "<C-q><C-q>", function()
     keep_session = true
     local ok, err = pcall(vim.cmd, "qa")
