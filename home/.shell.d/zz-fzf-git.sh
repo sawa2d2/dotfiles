@@ -35,10 +35,10 @@ _fzf_git_branch_candidates() {
       if ($3 > date[name]) date[name] = $3
       next
     }
-    $1 == "R" && $2 ~ /^refs\/remotes\/[^/]+\// && $2 !~ /\/HEAD$/ {
+    $1 == "R" && $2 ~ /^refs\/remotes\/[^\/]+\// && $2 !~ /\/HEAD$/ {
       ref = substr($2, 14)
       name = ref
-      sub(/^[^/]+\//, "", name)
+      sub(/^[^\/]+\//, "", name)
       if (!(name in remote_ref) || ref ~ /^origin\//)
         remote_ref[name] = ref
       if ($3 > date[name]) date[name] = $3
@@ -104,7 +104,7 @@ gbr() {
   elif (($# == 1)) && [[ -n $1 && $1 != -* ]]; then
     branch=$1
   else
-    echo 'Usage: gbr [branch] | fbr -b <new-branch> | fbr -d|-D [branch]' >&2
+    echo 'Usage: gbr [branch] | gbr -b <new-branch> | gbr -d|-D [branch]' >&2
     return 2
   fi
   if git show-ref --verify --quiet "refs/remotes/$branch"; then

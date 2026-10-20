@@ -68,7 +68,7 @@ candidates=$(_fzf_git_branch_candidates)
 visible=$(printf '%s\n' "$candidates" | cut -f2-)
 printf '%s\n' "$visible" | awk -v path="$TMP/long-linked" '
   index($0, path) {
-    if (index($0, path) != 5 + 42 + 1) bad = 1
+    if (index($0, path) != 5 + 42 + 2) bad = 1
     if (index($0, "...") == 0) bad = 1
     found = 1
   }
