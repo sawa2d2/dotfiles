@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo 'Usage: gfinish [-y|--yes] [-m <message>]' >&2
+  echo 'Usage: gfinish [-y|--yes] [-m <message> | -- <message...>]' >&2
 }
 
 assume_yes=false
@@ -22,6 +22,20 @@ while (($#)); do
     message=$2
     message_given=true
     shift 2
+    ;;
+  --)
+    if $message_given || (($# < 2)); then
+      usage
+      exit 2
+    fi
+    shift
+    message="$*"
+    if [[ -z ${message//[[:space:]]/} ]]; then
+      usage
+      exit 2
+    fi
+    message_given=true
+    break
     ;;
   -h | --help)
     usage
