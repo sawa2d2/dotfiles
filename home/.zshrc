@@ -55,16 +55,24 @@ done
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
 
 # Prefer Nix-managed Zsh plugins, with Homebrew as a fallback.
-for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
-    plugin_file="$HOME/.local/share/zsh/plugins/$plugin/$plugin.zsh"
-    if [[ -f "$plugin_file" ]]; then
-        source "$plugin_file"
-    elif (( $+commands[brew] )); then
-        plugin_file="$(brew --prefix)/share/$plugin/$plugin.zsh"
+# Load them once per shell: re-sourcing this file (e.g. via sr) would wrap
+# every zle widget again, slowing down both reloads and key handling.
+if (( ! ${+_dotfiles_zsh_plugins_loaded} )); then
+    typeset -g _dotfiles_zsh_plugins_loaded=1
+    # Run brew at most once, and not at all when brew shellenv already set it.
+    brew_prefix=${HOMEBREW_PREFIX:-}
+    for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+        plugin_file="$HOME/.local/share/zsh/plugins/$plugin/$plugin.zsh"
+        if [[ ! -f "$plugin_file" ]]; then
+            if [[ -z "$brew_prefix" ]] && (( $+commands[brew] )); then
+                brew_prefix=$(brew --prefix)
+            fi
+            plugin_file="${brew_prefix:-/nonexistent}/share/$plugin/$plugin.zsh"
+        fi
         [[ -f "$plugin_file" ]] && source "$plugin_file"
-    fi
-done
-unset plugin plugin_file
+    done
+    unset plugin plugin_file brew_prefix
+fi
 
 # Start tmux on an interactive terminal, unless already inside tmux
 dotfiles_tmux_auto_start

@@ -50,33 +50,37 @@ _prompt_path() {
 # Build the prompt before each command line.
 _prompt_command_zsh() {
     local exit_status=$?
-    local display_path branch="" dirty="" staged="" divergence="" counts="" ahead=0 behind=0
+    local display_path branch="" dirty="" staged="" divergence="" ahead=0 behind=0
+    local status_output line
     local git_color
 
     display_path="$(_prompt_path)"
 
-    # Detect Git branch and working tree state.
-    if git rev-parse --is-inside-work-tree &>/dev/null; then
-        branch="$(
-            git symbolic-ref --quiet --short HEAD 2>/dev/null ||
-            git rev-parse --short HEAD 2>/dev/null
-        )"
-
-        # Unstaged changes.
-        if ! git diff --no-ext-diff --quiet 2>/dev/null; then
-            dirty="*"
+    # Detect Git branch and working tree state with one Git process.
+    # --no-optional-locks keeps the prompt from contending for index.lock;
+    # untracked files are ignored, and the upstream is never fetched.
+    if status_output=$(git --no-optional-locks status --porcelain=v2 --branch \
+        --untracked-files=no 2> /dev/null); then
+        while IFS= read -r line; do
+            case $line in
+            "# branch.head "*) branch=${line#"# branch.head "} ;;
+            "# branch.ab "*)
+                read -r ahead behind <<< "${line#"# branch.ab "}"
+                ahead=${ahead#+}
+                behind=${behind#-}
+                ;;
+            # Changed entries: X is the staged state, Y the unstaged state.
+            [12u]" "*)
+                [[ ${line:2:1} != . ]] && staged="+"
+                [[ ${line:3:1} != . ]] && dirty="*"
+                ;;
+            esac
+        done <<< "$status_output"
+        if [[ $branch == "(detached)" ]]; then
+            branch=$(git rev-parse --short HEAD 2> /dev/null)
         fi
-
-        # Staged changes.
-        if ! git diff --no-ext-diff --cached --quiet 2>/dev/null; then
-            staged="+"
-        fi
-        # Compare with the locally known upstream; never fetch during prompt rendering.
-        if counts=$(git rev-list --left-right --count 'HEAD...@{upstream}' 2>/dev/null); then
-            read -r ahead behind <<< "$counts"
-            (( ahead > 0 )) && divergence="+$ahead"
-            (( behind > 0 )) && divergence+="-$behind"
-        fi
+        ((ahead > 0)) && divergence="+$ahead"
+        ((behind > 0)) && divergence+="-$behind"
     fi
 
     # Choose Git color.

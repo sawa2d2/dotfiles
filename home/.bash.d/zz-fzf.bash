@@ -7,10 +7,16 @@ if [[ ${FZF_DEFAULT_OPTS:-} == *--color=* ]]; then
   export FZF_DEFAULT_OPTS
 fi
 export FZF_DEFAULT_OPTS_FILE="$DOTPATH/theme/generated/fzf.opts"
+# Append each default once; re-sourcing and child shells inherit the variable.
+_fzf_default_opt() {
+  [[ " ${FZF_DEFAULT_OPTS:-} " == *" $1 "* ]] ||
+    export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }$1"
+}
 # Wrap from last to first candidate (and vice versa).
-export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:+$FZF_DEFAULT_OPTS }--cycle"
+_fzf_default_opt --cycle
 # Vim-style half-page navigation within fzf.
-export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS --bind=ctrl-d:half-page-down,ctrl-u:half-page-up"
+_fzf_default_opt --bind=ctrl-d:half-page-down,ctrl-u:half-page-up
+unset -f _fzf_default_opt
 
 # Resolve session colors only when fzf starts; preserve all other colors.
 fzf() {
