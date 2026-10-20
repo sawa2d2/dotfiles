@@ -15,11 +15,9 @@ if [[ -f "$nix_dir/local.env" ]]; then
     set +a
 fi
 
-if [[ -z ${HOME_MANAGER_USER:-} || -z ${HOME_MANAGER_HOME:-} ]]; then
-    echo "Error: HOME_MANAGER_USER and HOME_MANAGER_HOME must be set." >&2
-    echo "Set them in nix/local.env (ignored by Git), or export them before running." >&2
-    exit 1
-fi
+# Default to the invoking user, while allowing explicit overrides.
+export HOME_MANAGER_USER="${HOME_MANAGER_USER:-$(id -un)}"
+export HOME_MANAGER_HOME="${HOME_MANAGER_HOME:-$HOME}"
 
 if [[ "$HOME_MANAGER_HOME" != /* ]]; then
     echo "Error: HOME_MANAGER_HOME must be an absolute path." >&2
