@@ -94,7 +94,7 @@ _prompt_command_zsh() {
 
     # Previous command failed.
     if (( exit_status != 0 )); then
-        PROMPT+="%F{${_PROMPT_GIT_MIXED}}✘%f "
+        PROMPT+="%B%F{${_PROMPT_GIT_MIXED}}✘%f%b "
     fi
 
     # Escape Zsh prompt expansion characters.
@@ -103,10 +103,10 @@ _prompt_command_zsh() {
     if [[ -n "$branch" ]]; then
         branch="${branch//\%/%%}"
 
-        PROMPT+=" %F{${git_color}}(${branch}${divergence:+ ${divergence}}"
+        PROMPT+=" %B%F{${git_color}}(${branch}${divergence:+ ${divergence}}"
         [[ -n "$dirty" ]] && PROMPT+=" *"
         [[ -n "$staged" ]] && PROMPT+=" +"
-        PROMPT+=")%f"
+        PROMPT+=")%f%b"
     fi
 
     # $ for regular users, # for root.
