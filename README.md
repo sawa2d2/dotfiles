@@ -10,6 +10,8 @@ curl -fsSL https://raw.githubusercontent.com/sawa2d2/dotfiles/main/bootstrap.sh 
 
 Clones into `~/dotfiles` (override with `DOTFILES_DIR`) and installs symlinks. Existing Git checkouts are reused without pulling; other existing destinations are not overwritten.
 
+`./install` also installs nvm v0.40.8 if `~/.nvm` is absent. Existing nvm directories are left untouched; Node.js versions are not installed automatically. Bash and Zsh load nvm from the shared shell initialization. To install Node.js explicitly, run `nvm install --lts` in a new shell.
+
 ## private.d
 
 To manage private dotfiles separately, create a `private.d/` repository next to this repository's `home/` directory:

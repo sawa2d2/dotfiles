@@ -9,6 +9,13 @@ cat <<'EOF'
 EOF
 printf '\033[0m'
 
+# Install nvm for both Bash and Zsh without replacing existing installations.
+if [[ $DRY_RUN == true ]]; then
+    bash "$DOTPATH/scripts/install-nvm" --dry-run
+else
+    bash "$DOTPATH/scripts/install-nvm"
+fi
+
 # Dotfiles-specific tasks. Standard install already links files in home/.
 # Dotfiles-specific installation tasks.
 link_file "$DOTPATH/.editorconfig" "$HOME/.editorconfig"
