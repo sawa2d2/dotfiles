@@ -177,5 +177,18 @@ class MissingDirectoryTests(unittest.TestCase):
         self.assertFalse(any(call[0] == "send-keys" for call in calls))
 
 
+class ArgumentTests(unittest.TestCase):
+    def test_yes_flag_before_or_after_session(self):
+        for argv in (["info", "-y", "demo"], ["info", "demo", "-y"]):
+            with (
+                self.subTest(argv=argv),
+                patch.object(tmux_session.sys, "argv", ["tmux-session", *argv]),
+                patch.object(tmux_session, "load"),
+                patch.object(tmux_session, "info") as info,
+            ):
+                tmux_session.main()
+                info.assert_called_once_with("demo")
+
+
 if __name__ == "__main__":
     unittest.main()

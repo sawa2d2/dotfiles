@@ -537,7 +537,8 @@ def main():
     p.add_argument("action", choices=["save", "restore", "apply", "info", "activate"])
     p.add_argument("session", nargs="?", help="defaults to current session")
     p.add_argument("-y", "--yes", action="store_true", help="skip confirmation")
-    args = p.parse_args()
+    # Accept -y before or after the session name (e.g. tload -y name).
+    args = p.parse_intermixed_args()
     if args.action == "activate":
         if not args.session:
             raise ValueError("activate requires a window ID")
