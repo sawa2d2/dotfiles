@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 DIR = Path.home() / ".local/state/tmux/sessions"
+# Recent snapshots kept per session, in case the main file is lost or overwritten.
+HISTORY_LIMIT = 5
 
 # Only relaunch explicitly approved interactive applications.
 RESTORABLE_COMMANDS = frozenset(
@@ -70,6 +73,32 @@ def current():
 
 def path(name):
     return DIR / (quote(name, safe="") + ".json")
+
+
+def history_dir(name):
+    return DIR / "history" / quote(name, safe="")
+
+
+def keep_history(name, saved_at):
+    """Copy the saved snapshot into history and drop all but the newest ones."""
+    directory = history_dir(name)
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # ISO 8601 UTC timestamps sort chronologically as file names.
+    shutil.copyfile(path(name), directory / (saved_at + ".json"))
+    for old in sorted(directory.glob("*.json"))[:-HISTORY_LIMIT]:
+        old.unlink()
+
+
+def working_directory(cwd):
+    """Return cwd, or the home directory when the saved one no longer exists."""
+    if cwd and Path(cwd).is_dir():
+        return cwd
+    home = str(Path.home())
+    print(
+        f"tmux-session: missing working directory {cwd!r}; using {home}",
+        file=sys.stderr,
+    )
+    return home
 
 
 def exists(name):
@@ -268,6 +297,7 @@ def save(name):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+    keep_history(name, data["saved_at"])
     print(f"Saved session {name}: {len(data['windows'])} windows -> {path(name)}")
 
 
@@ -335,8 +365,12 @@ def activate(window_id):
 
         cwd = get_option("@tload_cwd")
         command = get_option("@tload_command")
-        if not cwd or not Path(cwd).is_dir():
-            raise ValueError(f"Missing working directory for {pane_id}: {cwd}")
+        resolved = working_directory(cwd)
+        # A saved command may act on its directory (e.g. resuming a session),
+        # so do not start it elsewhere.
+        if resolved != cwd:
+            command = None
+        cwd = resolved
         shell = tm("show-options", "-g", "-v", "default-shell")
         tm("respawn-pane", "-k", "-c", cwd, "-t", pane_id, shell)
         if command:
@@ -350,6 +384,15 @@ def activate(window_id):
 def apply(name):
     data = load(name)
     windows = sorted(data["windows"], key=lambda w: w["index"])
+    # Fall back for directories removed since the save instead of failing the
+    # whole restore; such panes start a shell only.
+    for window in windows:
+        for pane in window["panes"]:
+            cwd = working_directory(pane["cwd"])
+            if cwd != pane["cwd"]:
+                pane["cwd"] = cwd
+                pane["command"] = None
+                pane["argv"] = None
     stage = f"__tload_{os.getpid()}"
     previous = f"__tload_old_{os.getpid()}"
     old_id = (
@@ -366,8 +409,6 @@ def apply(name):
     try:
         first = windows[0]
         cwd = first["panes"][0]["cwd"]
-        if not Path(cwd).is_dir():
-            raise ValueError(f"Missing working directory: {cwd}")
         tm(
             "new-session",
             "-d",
@@ -392,8 +433,6 @@ def apply(name):
                     tm("move-window", "-s", wid, "-t", f"{stage}:{window['index']}")
             else:
                 cwd = window["panes"][0]["cwd"]
-                if not Path(cwd).is_dir():
-                    raise ValueError(f"Missing working directory: {cwd}")
                 tm(
                     "new-window",
                     "-d",
@@ -419,8 +458,6 @@ def apply(name):
             pane_ids = {window["panes"][0]["index"]: original_id}
             for pane in window["panes"][1:]:
                 cwd = pane["cwd"]
-                if not Path(cwd).is_dir():
-                    raise ValueError(f"Missing working directory: {cwd}")
                 pane_ids[pane["index"]] = tm(
                     "split-window",
                     "-d",

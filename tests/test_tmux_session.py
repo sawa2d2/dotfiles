@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Regression tests for tmux-session's allowlisted process restoration."""
+from contextlib import redirect_stderr, redirect_stdout
 import importlib.util
+import io
+import json
+import tempfile
 from importlib.machinery import SourceFileLoader
 import unittest
 from unittest.mock import patch
@@ -105,6 +109,72 @@ class MacOSProcessTests(unittest.TestCase):
                     {"command": "node", "argv": ["node", "bob"]},
                 )
                 probe.assert_called_once_with(500, "node")
+
+
+class SaveHistoryTests(unittest.TestCase):
+    def test_save_keeps_newest_history_snapshots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            snapshots = [
+                {"version": 1, "session": "a/b", "saved_at": str(i), "windows": [{}]}
+                for i in range(7)
+            ]
+            with patch.object(tmux_session, "DIR", root), patch.object(
+                tmux_session, "snapshot", side_effect=snapshots
+            ), redirect_stdout(io.StringIO()):
+                for _ in snapshots:
+                    tmux_session.save("a/b")
+
+            latest = json.loads((root / "a%2Fb.json").read_text())
+            self.assertEqual(latest["saved_at"], "6")
+            history = sorted((root / "history" / "a%2Fb").glob("*.json"))
+            self.assertEqual(
+                [json.loads(p.read_text())["saved_at"] for p in history],
+                ["2", "3", "4", "5", "6"],
+            )
+            # History must not appear as a session snapshot next to the main files.
+            self.assertEqual(sorted(p.name for p in root.glob("*.json")), ["a%2Fb.json"])
+
+
+class MissingDirectoryTests(unittest.TestCase):
+    def test_existing_directory_is_kept(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(tmux_session.working_directory(tmp), tmp)
+
+    def test_missing_directory_falls_back_to_home(self):
+        with redirect_stderr(io.StringIO()) as err:
+            cwd = tmux_session.working_directory("/nonexistent/tload-test")
+        self.assertEqual(cwd, str(Path.home()))
+        self.assertIn("/nonexistent/tload-test", err.getvalue())
+
+    def test_activate_uses_home_and_skips_command_for_missing_directory(self):
+        options = {"@tload_cwd": "/nonexistent/tload-test", "@tload_command": "nvim"}
+
+        def run(args, **kwargs):
+            if args[:2] == ["tmux", "show-options"] and args[-1] == "@tload_pending":
+                return subprocess.CompletedProcess(args, 0, "1\n", "")
+            value = options.get(args[-1])
+            return subprocess.CompletedProcess(args, 0 if value else 1, f"{value}\n", "")
+
+        calls = []
+
+        def tm(*args):
+            calls.append(args)
+            return "/bin/zsh" if args[0] == "show-options" else ""
+
+        with (
+            patch.object(tmux_session.subprocess, "run", side_effect=run),
+            patch.object(tmux_session, "records", return_value=[("%1",)]),
+            patch.object(tmux_session, "tm", side_effect=tm),
+            redirect_stderr(io.StringIO()),
+        ):
+            tmux_session.activate("@1")
+
+        self.assertIn(
+            ("respawn-pane", "-k", "-c", str(Path.home()), "-t", "%1", "/bin/zsh"),
+            calls,
+        )
+        self.assertFalse(any(call[0] == "send-keys" for call in calls))
 
 
 if __name__ == "__main__":
