@@ -10,7 +10,8 @@
 ## Usage
 
 ```bash
-./theme/sync teal
+./theme/sync teal     # Save an explicit global color
+./theme/sync         # Reapply the saved color (or teal on first install)
 ```
 
 ## Allowed options
@@ -36,3 +37,5 @@ The Bash and Zsh `fzf` functions read tmux's session accent and selected colors
 at launch and override only fzf's highlight, prompt, pointer and selection
 background. Other fzf colors remain global. Commands that execute the fzf
 binary directly (outside the shell function) use the global theme.
+
+The selection is saved in `${XDG_CONFIG_HOME:-$HOME/.config}/dotfiles/theme` and is preserved by subsequent `./install` runs. On first upgrade, an existing generated tmux accent is detected and retained when no saved selection exists. `./install --dry-run` does not change the selection.

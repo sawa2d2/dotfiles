@@ -47,7 +47,7 @@ done
 if [[ -x "$DOTPATH/theme/sync" ]]; then
     echo "Generate theme configurations"
     if [[ "$DRY_RUN" == false ]]; then
-        "$DOTPATH/theme/sync" teal
+        "$DOTPATH/theme/sync"
     fi
     for theme_file in .tmux.theme.conf .vim.theme.vim; do
         theme_link="$HOME/$theme_file"
