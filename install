@@ -260,12 +260,15 @@ for src in "$DOTPATH"/home/.[!.]* "$DOTPATH"/home/..?*; do
     link_file "$src" "$HOME/${src##*/}"
 done
 if [[ -d "$DOTPATH/home/.config" ]]; then
-    while IFS= read -r -d '' src; do
-        relative="${src#"$DOTPATH/home/.config/"}"
+    # Only install Git-tracked configuration files, never generated caches.
+    while IFS= read -r -d '' relative; do
+        src="$DOTPATH/$relative"
+        [[ -f "$src" || -L "$src" ]] || continue
+        relative="${relative#home/.config/}"
         # VS Code User settings are placed by install-extra on each OS.
         [[ "$relative" == vscode/* && -f "$DOTPATH/install-extra" ]] && continue
         link_file "$src" "$HOME/.config/$relative"
-    done < <(find "$DOTPATH/home/.config" \( -type f -o -type l \) -print0)
+    done < <(git -C "$DOTPATH" ls-files -z --cached -- home/.config)
 fi
 if [[ -f "$DOTPATH/install-extra" ]]; then
     source "$DOTPATH/install-extra"
