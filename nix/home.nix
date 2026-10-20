@@ -22,6 +22,8 @@
     pyright
   ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
     blesh
+    # Claude Code /copy and image paste use xclip (not xsel), e.g. over ssh -X.
+    xclip
   ];
 
   # Neovim plugins, installed in the native package discovery path.
