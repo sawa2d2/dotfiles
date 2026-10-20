@@ -78,4 +78,16 @@ printf '%s\n' "$candidates" | grep -Fq "$long_branch"
 fzf() { grep -F "$long_branch" | head -n 1; }
 [[ $(_fzf_git_select_branch) == "$long_branch" ]]
 
-echo 'PASS: deduplicated branch status, capped columns and ref selection'
+# Like gbr -b, gwt -b requires a new branch name and never opens fzf.
+fzf() {
+  echo 'fzf must not run' >&2
+  return 1
+}
+status=0
+err=$(gwt -b 2>&1) || status=$?
+[[ $status -eq 2 && $err == 'Usage: gwt -b <new-branch>' ]]
+status=0
+err=$(gwt -b '' 2>&1) || status=$?
+[[ $status -eq 2 && $err == 'Usage: gwt -b <new-branch>' ]]
+
+echo 'PASS: deduplicated branch status, capped columns, ref selection and gwt -b usage'

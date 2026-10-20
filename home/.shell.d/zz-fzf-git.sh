@@ -147,10 +147,14 @@ gwt() {
     cd -- "$worktree_dir"
     return
   fi
-  if (($# == 2)) && [[ $1 == -m ]]; then
-    worktree_dir=$(gwt-path -m "$2") || return
-  elif (($# == 2)) && [[ $1 == -b ]]; then
+  if [[ ${1:-} == -b ]]; then
+    if (($# != 2)) || [[ -z $2 ]]; then
+      echo 'Usage: gwt -b <new-branch>' >&2
+      return 2
+    fi
     worktree_dir=$(gwt-path -b "$2") || return
+  elif (($# == 2)) && [[ $1 == -m ]]; then
+    worktree_dir=$(gwt-path -m "$2") || return
   elif (($# == 1)) && [[ $1 != -* ]]; then
     worktree_dir=$(gwt-path "$1") || return
   elif (($# == 0)); then
