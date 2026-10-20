@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Remove only local branches whose changes can be proven present on origin/main.
+set -euo pipefail
+
+usage() {
+  printf 'Usage: gprune [-y|--yes]\nDefault: preview eligible local branches.\n' >&2
+}
+
+delete=false
+case ${1:-} in
+  '') ;;
+  -y|--yes) delete=true ;;
+  -h|--help) usage; exit 0 ;;
+  *) usage; exit 2 ;;
+esac
+if (($# > 1)); then usage; exit 2; fi
+
+git rev-parse --is-inside-work-tree >/dev/null
+git fetch --prune origin || { echo 'Failed to refresh origin; no branches deleted.' >&2; exit 1; }
+git show-ref --verify --quiet refs/remotes/origin/main || {
+  echo 'origin/main not found; no branches deleted.' >&2
+  exit 1
+}
+
+# Also exclude branches checked out in another worktree.
+checked_out=$(git worktree list --porcelain | sed -n 's|^branch refs/heads/||p')
+candidates=0
+while IFS= read -r branch; do
+  case $branch in
+    main|master|develop|development) continue ;;
+  esac
+  if printf '%s\n' "$checked_out" | grep -Fxq -- "$branch"; then
+    continue
+  fi
+  # Never delete a local branch that still exists on origin.
+  if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    continue
+  fi
+
+  if git merge-base --is-ancestor "$branch" origin/main; then
+    reason='merged'
+  else
+    base=$(git merge-base origin/main "$branch") || continue
+    # git cherry compares patch IDs; merge commits have no comparable patch.
+    # Refuse branches with merges or with any unmatched local commit.
+    if [[ -n $(git rev-list --merges "$base..$branch") ]]; then
+      continue
+    fi
+    cherries=$(git cherry origin/main "$branch" "$base") || continue
+    if [[ -n $cherries && $cherries != *'+'* ]]; then
+      reason='patch-equivalent'
+    else
+      # Also recognize a multi-commit branch squashed into one main commit.
+      # Matching patch IDs prove the aggregate diff was applied verbatim.
+      patch=$(git diff --no-ext-diff "$base" "$branch" | git patch-id --stable) || continue
+      patch=${patch%% *}
+      [[ -n $patch ]] || continue
+      if ! git log -p --no-merges --no-ext-diff --format='commit %H' "$base..origin/main" |
+        git patch-id --stable | grep -q "^$patch "; then
+        continue
+      fi
+      reason='squash-equivalent'
+    fi
+  fi
+
+  candidates=$((candidates + 1))
+  if $delete; then
+    printf 'DELETE %-45s (%s)\n' "$branch" "$reason"
+    git branch -D -- "$branch"
+  else
+    printf 'WOULD DELETE %-39s (%s)\n' "$branch" "$reason"
+  fi
+done < <(git for-each-ref --format='%(refname:short)' refs/heads)
+
+if $delete; then
+  printf 'Deleted %d local branch(es).\n' "$candidates"
+else
+  printf '%d candidate(s). Run gprune -y to delete.\n' "$candidates"
+fi
