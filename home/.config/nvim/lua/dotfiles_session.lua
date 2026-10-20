@@ -98,10 +98,13 @@ function M.setup()
   local root = git_root(base)
 
   vim.opt.sessionoptions = { "curdir", "folds", "help", "tabpages", "winsize" }
-  -- Explicit Ctrl-Q Ctrl-Q keeps the session; ordinary :q/:qa discards it.
-  -- This must run before persistence.nvim's VimLeavePre save handler.
+  -- Ctrl-Q Ctrl-Q saves the current layout; ordinary quits preserve the last
+  -- saved session without overwriting it.
   local keep_session = false
   local manage_session = true
+
+  -- A PTY hangup can trigger the same exit events as :qa.
+  -- Never delete a saved session as a side effect of quitting.
   vim.api.nvim_create_autocmd("VimLeavePre", {
     callback = function()
       if not manage_session then
@@ -109,11 +112,17 @@ function M.setup()
       end
       vim.cmd.cd(vim.fn.fnameescape(root))
       if not keep_session then
+        -- Do not overwrite the last checkpoint on an ordinary exit or hangup.
         persistence.stop()
-        vim.fn.delete(persistence.current())
       end
     end,
   })
+
+  -- Forgetting a session must be intentional, not inferred from exit events.
+  vim.api.nvim_create_user_command("SessionForget", function()
+    persistence.stop()
+    vim.fn.delete(persistence.current())
+  end, { desc = "Discard saved session for this project" })
 
   persistence.setup({
     dir = vim.fn.stdpath("state") .. "/dotfiles-persistence/",
