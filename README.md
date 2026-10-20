@@ -2,13 +2,13 @@
 
 ## Install dotfiles
 
-The `home/` directory contains dotfiles linked directly into `$HOME`. The repository-level `.editorconfig` stays at the root to configure this repository as well.
-
-Run `./install` from the repository root to install the dotfiles. After switching to this layout from an older checkout, run it immediately to repair symlinks pointing to the previous root paths.
+Requires Git.
 
 ```bash
-./install
+curl -fsSL https://raw.githubusercontent.com/sawa2d2/dotfiles/main/bootstrap.sh | bash
 ```
+
+Clones into `~/dotfiles` (override with `DOTFILES_DIR`) and installs symlinks. Existing Git checkouts are reused without pulling; other existing destinations are not overwritten.
 
 ## private.d
 
