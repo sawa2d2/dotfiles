@@ -216,8 +216,30 @@ link_file() {
         return
     fi
     if [[ -e "$dst" ]]; then
-        echo "CONFLICT: $dst" >&2
-        return
+        # Fresh accounts already have a default .bashrc. Preserve shell rc files
+        # before linking ours, as we do for existing VS Code user settings.
+        case "$dst" in
+            "$HOME/.bashrc"|"$HOME/.zshrc")
+                if [[ -f "$dst" ]]; then
+                    local backup="$dst.backup" backup_num=1
+                    while [[ -e "$backup" || -L "$backup" ]]; do
+                        backup="$dst.backup.$backup_num"
+                        backup_num=$((backup_num + 1))
+                    done
+                    echo "Backup: $dst -> $backup"
+                    if [[ "$DRY_RUN" == false ]]; then
+                        mv -- "$dst" "$backup"
+                    fi
+                else
+                    echo "CONFLICT: $dst" >&2
+                    return
+                fi
+                ;;
+            *)
+                echo "CONFLICT: $dst" >&2
+                return
+                ;;
+        esac
     fi
     echo "LINK: $dst -> $src"
     if [[ "$DRY_RUN" == false ]]; then
