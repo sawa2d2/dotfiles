@@ -3,34 +3,51 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: gprune [-y|--yes]\nDefault: preview eligible local branches.\n' >&2
+  printf 'Usage: gprune [-q|--quiet] [-w|--worktrees]\n' >&2
+  printf 'Quiet: skip repositories without origin/main and print only deletions.\n' >&2
+  printf 'Worktrees: also remove clean linked worktrees of deletable branches.\n' >&2
 }
 
-delete=false
-case ${1:-} in
-  '') ;;
-  -y|--yes) delete=true ;;
-  -h|--help) usage; exit 0 ;;
-  *) usage; exit 2 ;;
-esac
-if (($# > 1)); then usage; exit 2; fi
+quiet=false
+worktrees=false
+for arg in "$@"; do
+  case $arg in
+    -q|--quiet) quiet=true ;;
+    -w|--worktrees) worktrees=true ;;
+    -h|--help) usage; exit 0 ;;
+    *) usage; exit 2 ;;
+  esac
+done
 
 git rev-parse --is-inside-work-tree >/dev/null
-git fetch --prune origin || { echo 'Failed to refresh origin; no branches deleted.' >&2; exit 1; }
+# Quiet mode runs automatically after fetch/pull, so skip unsupported repositories.
+if $quiet && ! git show-ref --verify --quiet refs/remotes/origin/main; then
+  exit 0
+fi
+fetch_opts=(--prune)
+$quiet && fetch_opts+=(--quiet)
+git fetch "${fetch_opts[@]}" origin || { echo 'Failed to refresh origin; no branches deleted.' >&2; exit 1; }
 git show-ref --verify --quiet refs/remotes/origin/main || {
   echo 'origin/main not found; no branches deleted.' >&2
   exit 1
 }
 
-# Also exclude branches checked out in another worktree.
-checked_out=$(git worktree list --porcelain | sed -n 's|^branch refs/heads/||p')
-candidates=0
+# Forget worktrees whose directories were deleted manually.
+if $worktrees; then git worktree prune; fi
+# One "branch<TAB>path" line per worktree; branch names cannot contain tabs.
+checked_out=$(git worktree list --porcelain |
+  awk '/^worktree /{path=substr($0,10)} /^branch refs\/heads\//{print substr($0,19) "\t" path}')
+primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+current=$(git rev-parse --show-toplevel)
+deleted=0
 while IFS= read -r branch; do
   case $branch in
     main|master|develop|development) continue ;;
   esac
-  if printf '%s\n' "$checked_out" | grep -Fxq -- "$branch"; then
-    continue
+  worktree=$(printf '%s\n' "$checked_out" | awk -F '\t' -v b="$branch" '$1 == b {print $2; exit}')
+  if [[ -n $worktree ]]; then
+    # Only -w may remove a worktree, and never the primary or current one.
+    $worktrees && [[ $worktree != "$primary" && $worktree != "$current" ]] || continue
   fi
   # Never delete a local branch that still exists on origin.
   if git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
@@ -63,17 +80,17 @@ while IFS= read -r branch; do
     fi
   fi
 
-  candidates=$((candidates + 1))
-  if $delete; then
-    printf 'DELETE %-45s (%s)\n' "$branch" "$reason"
-    git branch -D -- "$branch"
-  else
-    printf 'WOULD DELETE %-39s (%s)\n' "$branch" "$reason"
+  if [[ -n $worktree ]]; then
+    # Without --force, git refuses worktrees with changes, untracked files or a lock.
+    if ! git worktree remove "$worktree"; then
+      printf 'SKIP %-47s (worktree not removable: %s)\n' "$branch" "$worktree"
+      continue
+    fi
+    reason="$reason, worktree $worktree"
   fi
+  printf 'DELETE %-45s (%s)\n' "$branch" "$reason"
+  git branch -D -- "$branch" >/dev/null
+  deleted=$((deleted + 1))
 done < <(git for-each-ref --format='%(refname:short)' refs/heads)
 
-if $delete; then
-  printf 'Deleted %d local branch(es).\n' "$candidates"
-else
-  printf '%d candidate(s). Run gprune -y to delete.\n' "$candidates"
-fi
+$quiet || printf 'Deleted %d local branch(es).\n' "$deleted"

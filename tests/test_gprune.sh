@@ -36,15 +36,12 @@ git -C "$TMP/repo" add unique
 git -C "$TMP/repo" commit -qm unique
 git -C "$TMP/repo" switch -q main
 
-preview=$(cd "$TMP/repo" && "$ROOT/bin/git/gprune")
-printf '%s\n' "$preview" | grep -q 'WOULD DELETE stale'
-if printf '%s\n' "$preview" | grep -q 'WOULD DELETE keep'; then
+output=$(cd "$TMP/repo" && "$ROOT/bin/git/gprune")
+printf '%s\n' "$output" | grep -q 'DELETE stale'
+if printf '%s\n' "$output" | grep -q 'DELETE keep'; then
   echo 'FAIL: unmerged branch selected' >&2
   exit 1
 fi
-git -C "$TMP/repo" show-ref -q --verify refs/heads/stale
-
-(cd "$TMP/repo" && "$ROOT/bin/git/gprune" -y) >/dev/null
 if git -C "$TMP/repo" show-ref -q --verify refs/heads/stale; then
   echo 'FAIL: merged branch not removed' >&2
   exit 1
@@ -52,4 +49,11 @@ fi
 git -C "$TMP/repo" show-ref -q --verify refs/heads/keep
 git -C "$TMP/repo" show-ref -q --verify refs/heads/main
 
-echo 'PASS: dry run and safe squash branch cleanup'
+# Quiet mode is silent when nothing is eligible or origin/main is missing.
+quiet=$(cd "$TMP/repo" && "$ROOT/bin/git/gprune" --quiet 2>&1)
+[[ -z $quiet ]] || { echo "FAIL: quiet mode printed: $quiet" >&2; exit 1; }
+git init -q -b master "$TMP/other"
+quiet=$(cd "$TMP/other" && "$ROOT/bin/git/gprune" --quiet 2>&1)
+[[ -z $quiet ]] || { echo "FAIL: quiet mode without origin/main printed: $quiet" >&2; exit 1; }
+
+echo 'PASS: safe squash branch cleanup'
