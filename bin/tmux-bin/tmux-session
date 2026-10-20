@@ -44,8 +44,8 @@ def restorable_command(pane):
         and Path(argv[1]).name == "bob"
     ):
         # Only restore the specific known Bob resume invocation.
-        if argv[2:] == ["chat", "--resume", "latest", "--yolo"]:
-            return "bob chat --resume latest --yolo"
+        if argv[2:] == ["chat", "--resume", "latest", "--auto-approve"]:
+            return "bob chat --resume latest --auto-approve"
         return "bob"
     return None
 

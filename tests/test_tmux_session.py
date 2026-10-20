@@ -26,13 +26,21 @@ class RestoreCommandTests(unittest.TestCase):
                 "chat",
                 "--resume",
                 "latest",
-                "--yolo",
+                "--auto-approve",
             ],
         }
         self.assertEqual(
             tmux_session.restorable_command(pane),
-            "bob chat --resume latest --yolo",
+            "bob chat --resume latest --auto-approve",
         )
+
+    def test_legacy_yolo_resume_restores_plain_bob(self):
+        # The agent-config bob launcher resumes the latest task by default.
+        pane = {
+            "command": "node",
+            "argv": ["node", "/tmp/bob", "chat", "--resume", "latest", "--yolo"],
+        }
+        self.assertEqual(tmux_session.restorable_command(pane), "bob")
 
     def test_unapproved_bob_arguments_are_not_replayed(self):
         pane = {"command": "node", "argv": ["node", "/tmp/bob", "--dangerous", "x"]}
@@ -52,20 +60,20 @@ class MacOSProcessTests(unittest.TestCase):
     def test_node_bob_foreground_group(self):
         rows = (
             " 500 500 -zsh\n"
-            " 610 610 node /Users/test/.nvm/bin/bob chat --resume latest --yolo\n"
+            " 610 610 node /Users/test/.nvm/bin/bob chat --resume latest --auto-approve\n"
             " 611 610 helper --background\n"
             " 700 700 other\n"
         )
         self.assertEqual(
             tmux_session.macos_process_rows(rows, 610)[0],
-            (610, ["node", "/Users/test/.nvm/bin/bob", "chat", "--resume", "latest", "--yolo"]),
+            (610, ["node", "/Users/test/.nvm/bin/bob", "chat", "--resume", "latest", "--auto-approve"]),
         )
 
     def test_macos_foreground_lookup_and_restore(self):
         outputs = [
             subprocess.CompletedProcess([], 0, "610\n", ""),
             subprocess.CompletedProcess([], 0,
-                "500 500 -zsh\n610 610 node /Users/test/.nvm/bin/bob chat --resume latest --yolo\n", ""),
+                "500 500 -zsh\n610 610 node /Users/test/.nvm/bin/bob chat --resume latest --auto-approve\n", ""),
         ]
         with patch.object(tmux_session.subprocess, "run", side_effect=outputs) as run:
             pane = tmux_session.macos_foreground_process(500, "node")
@@ -73,7 +81,7 @@ class MacOSProcessTests(unittest.TestCase):
         self.assertEqual(pane["command"], "node")
         self.assertEqual(
             tmux_session.restorable_command(pane),
-            "bob chat --resume latest --yolo",
+            "bob chat --resume latest --auto-approve",
         )
 
     def test_macos_ps_failure_is_nonfatal(self):
