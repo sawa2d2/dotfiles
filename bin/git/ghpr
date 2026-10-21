@@ -1,11 +1,41 @@
 #!/usr/bin/env bash
-# Open the current branch's open PR, or the compare page to create one.
-# Arguments are passed to gh pr create (e.g. --base).
+# Open the current branch's open PR, or else its compare page. Never pushes:
+# gh pr create --web would offer to push an unpushed branch.
 set -euo pipefail
+
+if (($# != 0)); then
+  echo 'Usage: ghpr' >&2
+  exit 2
+fi
+
+branch=$(git symbolic-ref --quiet --short HEAD) || {
+  echo "Not on a branch." >&2
+  exit 1
+}
 
 # gh pr view fails when the branch has no PR; merged or closed PRs are history.
 state=$(gh pr view --json state --jq .state 2> /dev/null) || state=
 if [[ $state == OPEN ]]; then
   exec gh pr view --web
 fi
-exec gh pr create --web "$@"
+
+if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; then
+  echo "Remote branch not found: $branch (push it first)" >&2
+  exit 1
+fi
+compare=$(gh repo view --json url,defaultBranchRef --jq '.url + "/compare/" + .defaultBranchRef.name')
+url="$compare...$branch?expand=1"
+
+# Open browser without forwarding its output to the terminal.
+case "$(uname -s)" in
+Linux)
+  nohup xdg-open "$url" > /dev/null 2>&1 < /dev/null &
+  ;;
+Darwin)
+  open "$url" > /dev/null 2>&1
+  ;;
+*)
+  echo "Unsupported OS: $(uname -s)" >&2
+  exit 1
+  ;;
+esac
