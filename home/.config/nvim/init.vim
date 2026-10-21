@@ -2,9 +2,14 @@ let mapleader = " "
 
 source ~/.vimrc
 nnoremap Y yy
-" Yank to the system clipboard; plain y keeps using the unnamed register.
+" Yank to and paste from the system clipboard; plain y and p keep using the
+" unnamed register.
 nnoremap <leader>y "+y
 xnoremap <leader>y "+y
+nnoremap <leader>p "+p
+xnoremap <leader>p "+p
+nnoremap <leader>P "+P
+xnoremap <leader>P "+P
 
 " Neovim session management is provided by persistence.nvim.
 lua require('dotfiles_session').setup()
