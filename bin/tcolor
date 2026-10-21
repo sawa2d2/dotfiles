@@ -3,9 +3,16 @@
 set -euo pipefail
 
 usage() {
-  printf 'Usage: tcolor <teal|violet|orange|blue|red|green|default>\n' >&2
+  printf 'Usage: tcolor [-t session] <teal|violet|orange|blue|red|green|default>\n' >&2
   exit 2
 }
+# -t lets tmux-session reapply a saved variant to a restored session.
+target=
+if [[ ${1:-} == -t ]]; then
+  (($# >= 2)) || usage
+  target=$2
+  shift 2
+fi
 (($# == 1)) || usage
 
 variant=$1
@@ -14,15 +21,16 @@ case "$variant" in
   *) usage ;;
 esac
 
-if [[ -z ${TMUX:-} ]]; then
+if [[ -z $target && -z ${TMUX:-} ]]; then
   printf 'tcolor must run inside tmux.\n' >&2
   exit 2
 fi
-session=$(tmux display-message -p '#{session_id}')
+session=$(tmux display-message -p ${target:+-t "$target"} '#{session_id}')
 [[ -n $session ]] || exit 1
 
 if [[ $variant == default ]]; then
   # Inherit future global theme/sync changes.
+  tmux set-option -u -t "$session" @color_variant
   tmux set-option -u -t "$session" @color_bg
   tmux set-option -u -t "$session" @color_accent
   tmux set-option -u -t "$session" @color_selected
@@ -42,6 +50,8 @@ else
   fi
   THEME_VARIANT=$variant
   source "$ROOT/theme/colors.sh"
+  # Recorded by name so tsave/tload follow later theme color changes.
+  tmux set-option -t "$session" @color_variant "$variant"
   tmux set-option -t "$session" @color_bg "$COLOR_BG"
   tmux set-option -t "$session" @color_accent "$COLOR_ACCENT"
   tmux set-option -t "$session" @color_selected "$COLOR_SELECTED"
@@ -51,4 +61,5 @@ fi
 
 # Refresh pre-rendered multi-row window labels with the new background.
 bash "$(dirname "${BASH_SOURCE[0]}")/tmux-bin/tmux-status-windows" --sync
-tmux refresh-client -S
+# A restored session may have no attached client yet.
+tmux refresh-client -S 2> /dev/null || true

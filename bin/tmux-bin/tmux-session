@@ -14,6 +14,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 DIR = Path.home() / ".local/state/tmux/sessions"
+TCOLOR = Path(__file__).resolve().parents[1] / "tcolor"
 # Recent snapshots kept per session, in case the main file is lost or overwritten.
 HISTORY_LIMIT = 5
 
@@ -279,6 +280,8 @@ def snapshot(name):
         "version": 1,
         "session": name,
         "saved_at": datetime.now(timezone.utc).isoformat(),
+        # tcolor records its variant by name; None means the global color.
+        "color": tm("show-options", "-qv", "-t", sid, "@color_variant") or None,
         "windows": windows,
     }
 
@@ -325,12 +328,17 @@ def load(name):
             raise ValueError("Invalid pane directory")
     if len(indices) != len(set(indices)):
         raise ValueError("Duplicate window index")
+    color = data.get("color")
+    if color is not None and not (isinstance(color, str) and color.isalpha()):
+        raise ValueError("Invalid session color")
     return data
 
 
 def info(name):
     data = load(name)
     print(f"Saved session {name} ({data['saved_at']})")
+    if data.get("color"):
+        print(f"Color: {data['color']}")
     for window in sorted(data["windows"], key=lambda w: w["index"]):
         print(f"Window {window['index']}: {window['name']}")
         for pane in window["panes"]:
@@ -340,6 +348,18 @@ def info(name):
             if pane.get("argv"):
                 print(f"    argv: {json.dumps(pane['argv'], ensure_ascii=False)}")
 
+
+
+def apply_color(session, variant):
+    """Reapply a saved tcolor variant; a color failure must not abort restore."""
+    result = subprocess.run(
+        ["bash", str(TCOLOR), "-t", session, variant], capture_output=True, text=True
+    )
+    if result.returncode:
+        print(
+            f"tmux-session: cannot apply color {variant!r}: {result.stderr.strip()}",
+            file=sys.stderr,
+        )
 
 
 def activate(window_id):
@@ -504,6 +524,8 @@ def apply(name):
                 tm("set-option", "-p", "-t", pane_id, "@tload_command",
                    restorable_command(pane) or "")
             tm("set-option", "-w", "-t", wid, "@tload_pending", "1")
+        if data.get("color"):
+            apply_color(stage, data["color"])
         selected = [w for w in windows if w.get("active")]
         if selected:
             tm("select-window", "-t", f"{stage}:{selected[0]['index']}")
