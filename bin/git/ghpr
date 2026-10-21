@@ -1,2 +1,11 @@
 #!/usr/bin/env bash
+# Open the current branch's open PR, or the compare page to create one.
+# Arguments are passed to gh pr create (e.g. --base).
+set -euo pipefail
+
+# gh pr view fails when the branch has no PR; merged or closed PRs are history.
+state=$(gh pr view --json state --jq .state 2> /dev/null) || state=
+if [[ $state == OPEN ]]; then
+  exec gh pr view --web
+fi
 exec gh pr create --web "$@"
