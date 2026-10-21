@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Open every file this branch changes since it forked from origin/main, like
+# git dfm: commits, staged, unstaged and untracked files. Deleted files are
+# skipped because there is nothing to open. Vim and Neovim get up to four
+# vertical splits per tab.
+set -euo pipefail
+
+if (($# != 0)); then
+  printf 'Usage: git edit\n' >&2
+  exit 2
+fi
+
+top=$(git rev-parse --show-toplevel)
+cd "$top"
+base=$(git merge-base origin/main HEAD)
+
+files=()
+while IFS= read -r -d '' file; do
+  files+=("$file")
+done < <(
+  git diff -z --name-only --diff-filter=d "$base"
+  git ls-files -z --others --exclude-standard
+)
+
+if ((${#files[@]} == 0)); then
+  echo 'No changed files.'
+  exit 0
+fi
+
+# GIT_EDITOR may hold arguments (e.g. "code --wait"); let the shell split it.
+editor=$(git var GIT_EDITOR)
+read -r command _ <<< "$editor"
+case ${command##*/} in
+vim | nvim)
+  # Lay files out side by side, four per tab. Names come from argv() so no
+  # shell quoting is involved; tabedit is not capped by 'tabpagemax'.
+  layout='for i in range(1, argc() - 1)'
+  layout+=' | exe (i % 4 ? "rightbelow vsplit" : "tabedit") fnameescape(argv(i))'
+  layout+=' | endfor | tabdo wincmd = | tabfirst'
+  set -- -c "$layout" -- "${files[@]}"
+  ;;
+*)
+  set -- "${files[@]}"
+  ;;
+esac
+eval "$editor \"\$@\""
