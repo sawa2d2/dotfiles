@@ -62,10 +62,28 @@
     line-numbers = true
     navigate = true
     syntax-theme = Catppuccin Mocha
-    plus-style = syntax "#276C46"
-    minus-style = syntax "#803D49"
-    plus-emph-style = syntax "#32965C"
-    minus-emph-style = syntax "#AD4659"
+    # Dark backgrounds keep Catppuccin Mocha text >= 6:1 and comments >= 3.2:1,
+    # while changed lines and emphasized changes stay distinguishable.
+    plus-style = syntax "#143724"
+    minus-style = syntax "#4D252C"
+    plus-emph-style = syntax "#1B5132"
+    minus-emph-style = syntax "#77303D"
+    # delta's defaults (#444444, 256-color 28/88, ANSI blue) are too dim on a
+    # dark terminal.
+    line-numbers-zero-style = "#7F849C"
+    line-numbers-plus-style = "#A6E3A1"
+    line-numbers-minus-style = "#EBA0AC"
+    line-numbers-left-style = "#7F849C"
+    line-numbers-right-style = "#7F849C"
+    # ANSI blue follows the terminal palette (GNOME Tango #3465A4 is ~2.8:1);
+    # highlight file names and use a fixed bright blue for decorations.
+    file-style = bold "#1E1E2E" "#89B4FA"
+    file-decoration-style = none
+    hunk-header-decoration-style = "#89B4FA" box
+    hunk-header-line-number-style = "#89B4FA"
+    hunk-header-file-style = "#89B4FA"
+    # Wrap markers in side-by-side view.
+    inline-hint-style = "#7F849C"
 
 [interactive]
     diffFilter = delta --color-only
