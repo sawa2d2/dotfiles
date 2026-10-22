@@ -47,6 +47,7 @@ install_plugin nvim-neo-tree/neo-tree.nvim neo-tree-nvim v3.x
 install_plugin MunifTanjim/nui.nvim nui-nvim
 install_plugin lewis6991/gitsigns.nvim gitsigns-nvim
 install_plugin RRethy/vim-illuminate vim-illuminate
+install_plugin rhysd/conflict-marker.vim conflict-marker-vim
 install_plugin tomasr/molokai molokai
 install_plugin folke/persistence.nvim persistence-nvim
 install_plugin dense-analysis/ale ale
