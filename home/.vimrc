@@ -291,6 +291,15 @@ imap <C-c> <Esc>
 " Quit all tabs with two consecutive Ctrl+Q presses (honors unsaved changes).
 nnoremap <silent> <C-q><C-q> :qa<CR>
 
+" Line start and end without reaching for ^ and $. gh (Select mode) is
+" rarely used and gl is unmapped by default.
+nnoremap gh ^
+xnoremap gh ^
+onoremap gh ^
+nnoremap gl $
+xnoremap gl $
+onoremap gl $
+
 "tab
 nmap <S-L> gt
 nmap <S-H> gT
