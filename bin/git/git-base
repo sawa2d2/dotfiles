@@ -41,17 +41,36 @@ else
   echo 'Created at: unknown (no creation entry in the reflog)'
 fi
 
-# Nearest first: fewest commits on the branch since the shared commit.
+# origin/main is the reference point: under squash merges, old branches never
+# rejoin main, so any branch that forked no later than main did says nothing.
+# Commits reachable from it (e.g. via git mainmerge) are not this branch's own.
+upstream=origin/main
+git rev-parse --verify --quiet "refs/remotes/$upstream^{commit}" > /dev/null || upstream=
+main_fork=
+[[ -n $upstream ]] && main_fork=$(git merge-base "$tip" "refs/remotes/$upstream")
+
+candidates=()
+add_candidate() { # <name> <fork>
+  local count note='' unit=commits
+  count=$(git rev-list --count --no-merges "$2..$tip" ${upstream:+"^refs/remotes/$upstream"})
+  [[ $2 == "$created" ]] && note=' (matches creation)'
+  ((count == 1)) && unit=commit
+  candidates+=("$count"$'\t'"$1  $count $unit since $(git rev-parse --short "$2")$note")
+}
+[[ -n $main_fork ]] && add_candidate "$upstream" "$main_fork"
+
 # Skip the branch itself, branches that contain its own commits (descendants)
 # and branches created from them (children that moved on). Without commits of
 # its own yet, a branch is contained by its parent too, so keep those.
-candidates=()
 while IFS= read -r other; do
   [[ $other == "$branch" ]] && continue
   if git merge-base --is-ancestor "$tip" "refs/heads/$other"; then
     [[ $tip == "$created" || $(git rev-parse "refs/heads/$other") == "$tip" ]] || continue
   fi
   fork=$(git merge-base "$tip" "refs/heads/$other") || continue
+  if [[ -n $main_fork ]] && git merge-base --is-ancestor "$fork" "$main_fork"; then
+    continue
+  fi
   if [[ -n $created && $fork != "$created" ]] && git merge-base --is-ancestor "$created" "$fork"; then
     continue
   fi
@@ -60,17 +79,16 @@ while IFS= read -r other; do
   if [[ -n $other_entry && $fork != "$created" ]] && git merge-base --is-ancestor "$fork" "${other_entry%%$'\t'*}"; then
     continue
   fi
-  count=$(git rev-list --count "$fork..$tip")
-  note=
-  [[ $fork == "$created" ]] && note=' (matches creation)'
-  unit=commits
-  ((count == 1)) && unit=commit
-  candidates+=("$count"$'\t'"$other  $count $unit since $(git rev-parse --short "$fork")$note")
+  add_candidate "$other" "$fork"
 done < <(git for-each-ref --format='%(refname:short)' refs/heads)
 
 if ((${#candidates[@]} == 0)); then
   echo 'Candidates: none'
   exit 0
 fi
+limit=5
 echo 'Candidates (nearest first; a guess, not a record):'
-printf '%s\n' "${candidates[@]}" | sort -t $'\t' -k1,1n -s | cut -f2- | sed 's/^/  /'
+printf '%s\n' "${candidates[@]}" | sort -t $'\t' -k1,1n -s | cut -f2- | head -n "$limit" | sed 's/^/  /'
+if ((${#candidates[@]} > limit)); then
+  printf '  ... and %d more\n' $((${#candidates[@]} - limit))
+fi

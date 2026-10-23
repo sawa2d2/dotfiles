@@ -76,6 +76,62 @@ git -C "$TMP/lonely" -c user.name=Test -c user.email=test@example.com commit -q 
 out=$(git -C "$TMP/lonely" base)
 [[ $(sed -n 3p <<< "$out") == 'Candidates: none' ]] || fail 'no candidates'
 
+# Squash-merge workflow: old branches never rejoin main and the local main is
+# stale; origin/main is the reference, so neither shows up.
+git init -q -b main "$TMP/squash"
+cd "$TMP/squash"
+git config user.name Test
+git config user.email test@example.com
+commit m0
+git clone -q --bare . "$TMP/squash-origin.git"
+git remote add origin "$TMP/squash-origin.git"
+for i in 1 2 3; do
+  git switch -q -c "old$i" main
+  commit "o$i"
+  git switch -q main
+  git merge -q --squash "old$i" > /dev/null
+  commit "squash old$i"
+done
+git push -q origin main
+git fetch -q origin
+git switch -q -c dev main~2
+commit dev1
+git branch -q -f main main~2
+out=$(git base)
+[[ $(sed -n '4,$p' <<< "$out") == "  origin/main  1 commit since $(short dev~1) (matches creation)" ]] ||
+  fail 'squash workflow before mainmerge'
+
+# After merging origin/main, only this branch's own commits count.
+git merge -q --no-edit origin/main
+out=$(git base)
+[[ $(sed -n '4,$p' <<< "$out") == "  origin/main  1 commit since $(short origin/main)" ]] ||
+  fail 'squash workflow after mainmerge'
+
+# A parent that forked later than main did is still a candidate, and nearer.
+git switch -q -c child
+commit c1
+out=$(git base)
+[[ $(sed -n '4,$p' <<< "$out") == "$(printf '  %s\n' \
+  "dev  1 commit since $(short dev) (matches creation)" \
+  "origin/main  2 commits since $(short origin/main)")" ]] || fail 'stacked branch with origin'
+
+# Long lists are cut down to the nearest five.
+git init -q -b main "$TMP/many"
+cd "$TMP/many"
+git config user.name Test
+git config user.email test@example.com
+commit m0
+for i in 1 2 3 4 5 6 7; do
+  git switch -q -c "b$i" main
+  commit "b$i"
+done
+git switch -q -c target main
+commit t1
+out=$(git base)
+[[ $(sed -n '4,$p' <<< "$out" | wc -l) == 6 && $(tail -n 1 <<< "$out") == '  ... and 3 more' ]] ||
+  fail 'limit'
+cd "$TMP/repo"
+
 # Errors: detached HEAD without a name, unknown branch, extra arguments.
 git switch -q --detach
 status=0
