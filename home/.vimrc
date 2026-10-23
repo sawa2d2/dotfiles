@@ -9,6 +9,37 @@ if filereadable(expand('~/dotfiles/theme/generated/vim.theme.vim'))
     execute 'source' fnameescape(expand('~/dotfiles/theme/generated/vim.theme.vim'))
 endif
 
+" Follow the tmux session color set by tcolor. tcolor runs in another pane,
+" so read it again whenever this pane regains focus.
+function! s:TmuxSessionColors() abort
+    if empty($TMUX_PANE) || !exists('*DotfilesThemeVariant')
+        return
+    endif
+    let l:colors = split(system('tmux display-message -p -t '
+                \ . shellescape($TMUX_PANE) . ' "#{@color_accent} #{@color_selected}"'))
+    if v:shell_error || len(l:colors) != 2
+                \ || len(filter(copy(l:colors), 'v:val =~# "^#\\x\\{6}$"')) != 2
+                \ || l:colors ==# get(s:, 'tmux_colors', [])
+        return
+    endif
+    let s:tmux_colors = l:colors
+    call DotfilesThemeVariant(l:colors[0], l:colors[1])
+endfunction
+if !empty($TMUX_PANE)
+    if !has('nvim') && empty(&t_fe)
+        " Vim enables focus reporting only for xterm-like TERM values.
+        let &t_fe = "\<Esc>[?1004h"
+        let &t_fd = "\<Esc>[?1004l"
+        execute "set <FocusGained>=\<Esc>[I"
+        execute "set <FocusLost>=\<Esc>[O"
+    endif
+    call s:TmuxSessionColors()
+    augroup dotfiles_tmux_colors
+        autocmd!
+        autocmd FocusGained * call s:TmuxSessionColors()
+    augroup END
+endif
+
 set fenc=utf-8
 set nobackup
 set noswapfile

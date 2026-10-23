@@ -94,9 +94,7 @@ if has('termguicolors')
   set termguicolors
 endif
 highlight DotCmpNormal guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight DotCmpSelected guifg=$COLOR_FG guibg=$COLOR_SELECTED gui=bold
 highlight Pmenu guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight PmenuSel guifg=$COLOR_FG guibg=$COLOR_SELECTED gui=bold
 highlight PmenuSbar guibg=$COLOR_INACTIVE
 highlight PmenuThumb guibg=$COLOR_ACTIVE
 highlight CmpItemAbbr guifg=$COLOR_FG guibg=NONE
@@ -111,12 +109,10 @@ highlight SignColumn guibg=#393939 ctermbg=237
 highlight DotfilesHoverPadding guifg=$COLOR_INACTIVE guibg=$COLOR_INACTIVE
 highlight StatusLine guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE
 highlight StatusLineNC guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight DotStatusMode guifg=$COLOR_FG guibg=$COLOR_ACCENT gui=bold
 highlight DotStatusFile guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE gui=bold
 highlight DotStatusMeta guifg=$COLOR_FG guibg=$COLOR_INACTIVE
 highlight TabLineSel guifg=$COLOR_WHITE guibg=$COLOR_ACTIVE gui=bold
 highlight TabLine guifg=$COLOR_FG guibg=$COLOR_INACTIVE
-highlight TabLineFill guibg=$COLOR_SELECTED
 " Git gutter colors, shared across all theme variants.
 highlight GitSignsAdd guifg=$COLOR_GIT_CLEAN
 highlight GitSignsChange guifg=$COLOR_GIT_STAGED
@@ -132,8 +128,16 @@ highlight DotStatusError guifg=$COLOR_DIAG_ERROR guibg=$COLOR_ACTIVE gui=bold
 highlight DotStatusWarn guifg=$COLOR_DIAG_WARN guibg=$COLOR_ACTIVE gui=bold
 highlight DotStatusErrorNC guifg=$COLOR_DIAG_ERROR_INACTIVE guibg=$COLOR_INACTIVE
 highlight DotStatusWarnNC guifg=$COLOR_DIAG_WARN_INACTIVE guibg=$COLOR_INACTIVE
-highlight Visual guifg=$COLOR_FG guibg=$COLOR_SELECTED
-highlight Search guifg=$COLOR_FG guibg=$COLOR_SELECTED
+" Variant colors; .vimrc calls this again with the tmux session's colors.
+function! DotfilesThemeVariant(accent, selected) abort
+  execute 'highlight DotCmpSelected guifg=$COLOR_FG gui=bold guibg=' . a:selected
+  execute 'highlight PmenuSel guifg=$COLOR_FG gui=bold guibg=' . a:selected
+  execute 'highlight DotStatusMode guifg=$COLOR_FG gui=bold guibg=' . a:accent
+  execute 'highlight TabLineFill guibg=' . a:selected
+  execute 'highlight Visual guifg=$COLOR_FG guibg=' . a:selected
+  execute 'highlight Search guifg=$COLOR_FG guibg=' . a:selected
+endfunction
+call DotfilesThemeVariant('$COLOR_ACCENT', '$COLOR_SELECTED')
 VIM
 
 
