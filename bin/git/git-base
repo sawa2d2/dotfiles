@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# Guess where a branch forked from. Git records no parent branch, so this only
+# reports evidence: the commit the branch was created at (from its reflog,
+# which is local and expires) and the local branches whose shared history with
+# it is nearest. Nothing here is authoritative.
+set -euo pipefail
+
+if (($# > 1)); then
+  echo 'Usage: git base [branch]' >&2
+  exit 2
+fi
+
+if (($# == 1)); then
+  branch=$1
+else
+  branch=$(git symbolic-ref --quiet --short HEAD) || {
+    echo 'Not on a branch; name one: git base <branch>' >&2
+    exit 1
+  }
+fi
+tip=$(git rev-parse --verify --quiet "refs/heads/$branch^{commit}") || {
+  echo "No such local branch: $branch" >&2
+  exit 1
+}
+
+# The oldest reflog entry is the creation, unless it has expired. Prints
+# "<commit>\t<message>" or nothing.
+creation() {
+  local entry
+  entry=$(git reflog show --format='%H%x09%gs' "refs/heads/$1" -- 2> /dev/null | tail -n 1)
+  [[ $entry == *$'\t'"branch: Created from "* ]] && printf '%s\n' "$entry"
+  return 0
+}
+
+entry=$(creation "$branch")
+created=${entry%%$'\t'*}
+printf 'Branch: %s\n' "$branch"
+if [[ -n $entry ]]; then
+  printf 'Created at: %s (%s)\n' "$(git log -1 --format='%h %s' "$created")" "${entry#*$'\t'}"
+else
+  echo 'Created at: unknown (no creation entry in the reflog)'
+fi
+
+# Nearest first: fewest commits on the branch since the shared commit.
+# Skip the branch itself, branches that contain its own commits (descendants)
+# and branches created from them (children that moved on). Without commits of
+# its own yet, a branch is contained by its parent too, so keep those.
+candidates=()
+while IFS= read -r other; do
+  [[ $other == "$branch" ]] && continue
+  if git merge-base --is-ancestor "$tip" "refs/heads/$other"; then
+    [[ $tip == "$created" || $(git rev-parse "refs/heads/$other") == "$tip" ]] || continue
+  fi
+  fork=$(git merge-base "$tip" "refs/heads/$other") || continue
+  if [[ -n $created && $fork != "$created" ]] && git merge-base --is-ancestor "$created" "$fork"; then
+    continue
+  fi
+  # A branch created at or after the shared commit grew out of this one.
+  other_entry=$(creation "$other")
+  if [[ -n $other_entry && $fork != "$created" ]] && git merge-base --is-ancestor "$fork" "${other_entry%%$'\t'*}"; then
+    continue
+  fi
+  count=$(git rev-list --count "$fork..$tip")
+  note=
+  [[ $fork == "$created" ]] && note=' (matches creation)'
+  unit=commits
+  ((count == 1)) && unit=commit
+  candidates+=("$count"$'\t'"$other  $count $unit since $(git rev-parse --short "$fork")$note")
+done < <(git for-each-ref --format='%(refname:short)' refs/heads)
+
+if ((${#candidates[@]} == 0)); then
+  echo 'Candidates: none'
+  exit 0
+fi
+echo 'Candidates (nearest first; a guess, not a record):'
+printf '%s\n' "${candidates[@]}" | sort -t $'\t' -k1,1n -s | cut -f2- | sed 's/^/  /'
