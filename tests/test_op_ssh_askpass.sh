@@ -15,7 +15,7 @@ printf '%s\n' "$*" >> "$OP_LOG"
 [ "$1" = read ] && printf 'secret-for:%s\n' "$2"
 EOF
 chmod +x "$TMP/bin/op"
-export PATH="$TMP/bin:$PATH" HOME="$TMP/home" OP_LOG="$TMP/op.log"
+export PATH="$TMP/bin:$PATH" HOME="$TMP/home" OP_LOG="$TMP/op.log" TMPDIR="$TMP"
 cat > "$HOME/.config/secret/ssh-passwords.conf" << 'EOF'
 # host as shown in the password prompt = 1Password secret reference
 host1=op://SSH/host1/password
@@ -48,6 +48,30 @@ out=$(no_tty "$ASKPASS" '(dev@host1) Password: ')
 status=0
 out=$(no_tty "$ASKPASS" '(dev@evil) (dev@host1) Password: ') || status=$?
 ((status == 1)) && [[ ! -s $OP_LOG ]] || fail 'spoofed keyboard-interactive prompt'
+
+# A rejected password is not resent: within one ssh process (the parent),
+# 1Password answers only the first prompt and the rest go to the terminal.
+cat > "$TMP/bin/twice" << 'EOF'
+#!/bin/sh
+"$1" "$2"; echo "status=$?"
+"$1" "$2"; echo "status=$?"
+EOF
+chmod +x "$TMP/bin/twice"
+: > "$OP_LOG"
+out=$(no_tty twice "$ASKPASS" "dev@host1's password: ")
+[[ $out == $'secret-for:op://SSH/host1/password\nstatus=0\nstatus=1' ]] || fail 'second prompt without a terminal'
+[[ $(wc -l < "$OP_LOG") == 1 ]] || fail '1Password read only once'
+out=$(with_tty typed twice "$ASKPASS" "dev@host1's password: ")
+[[ $out == *secret-for:op://SSH/host1/password*rejected*typed* ]] || fail 'second prompt asked on the terminal'
+
+# Records of finished ssh processes are cleaned up.
+true &
+dead=$!
+wait "$dead"
+touch "$TMP/op-ssh-askpass-$(id -u)/$dead"
+no_tty "$ASKPASS" "dev@host1's password: " > /dev/null
+[[ ! -e $TMP/op-ssh-askpass-$(id -u)/$dead ]] || fail 'stale record removed'
+: > "$OP_LOG"
 
 # Unmapped hosts and other prompts never reach 1Password; with no terminal
 # to ask, they fail like ssh would.

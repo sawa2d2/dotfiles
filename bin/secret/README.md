@@ -26,6 +26,8 @@ admin@myvm=op://Private/myvm-admin/password
   `HostKeyAlias` when set (handy when the address changes). `user@host` wins.
 - Only ssh's own password prompts are answered from 1Password. Anything else,
   an unlisted host, or a failed lookup is asked on the terminal as usual.
+- A rejected password is not resent (avoids fail2ban lockouts): ssh's retry
+  prompts are asked on the terminal.
 - Disable for one command: `SSH_ASKPASS_REQUIRE=never ssh myvm`.
 
 Example `~/.ssh/config` entry for such a host (the Control* lines reuse one
