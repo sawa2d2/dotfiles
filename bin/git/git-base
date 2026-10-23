@@ -13,10 +13,12 @@ fi
 if (($# == 1)); then
   branch=$1
 else
-  branch=$(git symbolic-ref --quiet --short HEAD) || {
+  # Not --short: it turns into heads/<name> when a tag has the same name.
+  branch=$(git symbolic-ref --quiet HEAD) || {
     echo 'Not on a branch; name one: git base <branch>' >&2
     exit 1
   }
+  branch=${branch#refs/heads/}
 fi
 tip=$(git rev-parse --verify --quiet "refs/heads/$branch^{commit}") || {
   echo "No such local branch: $branch" >&2
@@ -57,12 +59,14 @@ add_candidate() { # <name> <fork>
   ((count == 1)) && unit=commit
   candidates+=("$count"$'\t'"$1  $count $unit since $(git rev-parse --short "$2")$note")
 }
-[[ -n $main_fork ]] && add_candidate "$upstream" "$main_fork"
+# On main itself, origin/main is the same branch, not a parent.
+[[ -n $main_fork && $branch != "${upstream#origin/}" ]] && add_candidate "$upstream" "$main_fork"
 
 # Skip the branch itself, branches that contain its own commits (descendants)
 # and branches created from them (children that moved on). Without commits of
 # its own yet, a branch is contained by its parent too, so keep those.
 while IFS= read -r other; do
+  other=${other#refs/heads/}
   [[ $other == "$branch" ]] && continue
   if git merge-base --is-ancestor "$tip" "refs/heads/$other"; then
     [[ $tip == "$created" || $(git rev-parse "refs/heads/$other") == "$tip" ]] || continue
@@ -80,15 +84,11 @@ while IFS= read -r other; do
     continue
   fi
   add_candidate "$other" "$fork"
-done < <(git for-each-ref --format='%(refname:short)' refs/heads)
+done < <(git for-each-ref --format='%(refname)' refs/heads)
 
 if ((${#candidates[@]} == 0)); then
   echo 'Candidates: none'
   exit 0
 fi
-limit=5
 echo 'Candidates (nearest first; a guess, not a record):'
-printf '%s\n' "${candidates[@]}" | sort -t $'\t' -k1,1n -s | cut -f2- | head -n "$limit" | sed 's/^/  /'
-if ((${#candidates[@]} > limit)); then
-  printf '  ... and %d more\n' $((${#candidates[@]} - limit))
-fi
+printf '%s\n' "${candidates[@]}" | sort -t $'\t' -k1,1n -s | cut -f2- | sed 's/^/  /'

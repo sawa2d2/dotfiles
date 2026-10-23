@@ -107,6 +107,10 @@ out=$(git base)
 [[ $(sed -n '4,$p' <<< "$out") == "  origin/main  1 commit since $(short origin/main)" ]] ||
   fail 'squash workflow after mainmerge'
 
+# On main itself, origin/main is the same branch, not a candidate.
+out=$(git base main)
+grep -q '^  origin/main ' <<< "$out" && fail 'main listed origin/main'
+
 # A parent that forked later than main did is still a candidate, and nearer.
 git switch -q -c child
 commit c1
@@ -115,7 +119,7 @@ out=$(git base)
   "dev  1 commit since $(short dev) (matches creation)" \
   "origin/main  2 commits since $(short origin/main)")" ]] || fail 'stacked branch with origin'
 
-# Long lists are cut down to the nearest five.
+# Every candidate is listed, however many there are.
 git init -q -b main "$TMP/many"
 cd "$TMP/many"
 git config user.name Test
@@ -128,8 +132,14 @@ done
 git switch -q -c target main
 commit t1
 out=$(git base)
-[[ $(sed -n '4,$p' <<< "$out" | wc -l) == 6 && $(tail -n 1 <<< "$out") == '  ... and 3 more' ]] ||
-  fail 'limit'
+[[ $(sed -n '4,$p' <<< "$out" | wc -l) == 8 ]] || fail 'all candidates'
+
+# The branch never lists itself, even when a tag shares its name.
+git switch -q -c fresh main
+git tag fresh
+out=$(git base)
+grep -q 'fresh ' <<< "$out" && fail 'branch listed itself'
+
 cd "$TMP/repo"
 
 # Errors: detached HEAD without a name, unknown branch, extra arguments.
