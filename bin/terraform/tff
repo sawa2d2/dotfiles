@@ -1,2 +1,2 @@
 #!/bin/bash
-exec terraform fmt "$@"
+exec tf fmt "$@"
