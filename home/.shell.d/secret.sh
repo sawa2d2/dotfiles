@@ -31,11 +31,13 @@ load-secret() {
 
     root="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
     [[ -d $root ]] || root=${TMPDIR:-}
-    [[ -n $root && -d $root ]] || { printf 'load-secret: no runtime directory\n' >&2; return 1; }
+    [[ $root == /* && -d $root ]] || { printf 'load-secret: no runtime directory\n' >&2; return 1; }
     root="$root/secret-cache"
     [[ ! -L $root ]] || return 1
     (umask 077; mkdir -p -- "$root") || return 1
-    chmod 700 -- "$root" || return 1
+    # No "--": BSD chmod (macOS) takes it as a file name after the mode. The
+    # absolute path above cannot be mistaken for an option.
+    chmod 700 "$root" || return 1
 
     if command -v sha256sum >/dev/null 2>&1; then
         hash=$(printf '%s' "$ref" | sha256sum) || return 1
