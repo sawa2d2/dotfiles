@@ -74,18 +74,21 @@ if [[ $requested_row == --rows ]]; then
 fi
 
 # Query the theme once; use tmux format expansion to resolve custom colors.
-IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg bar_bg <<< "$(
-  tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}	#{@color_bg}'
+IFS=$'\t' read -r active_fg active_bg inactive_fg inactive_bg bar_bg attention_bg <<< "$(
+  tmux display-message -p -t "$session_id" '#{@color_white}	#{@color_active}	#{@color_fg}	#{@color_inactive}	#{@color_bg}	#{@color_selected}'
 )"
 active_fg=${active_fg:-white}
 active_bg=${active_bg:-black}
 inactive_fg=${inactive_fg:-black}
 inactive_bg=${inactive_bg:-white}
 bar_bg=${bar_bg:-default}
+attention_bg=${attention_bg:-magenta}
 
 row=0
 used=0
-while IFS=$'\t' read -r label active; do
+# attention (agent-config's @agent_attention) comes last because read
+# collapses an empty tab-separated field.
+while IFS=$'\t' read -r label active attention; do
   [[ -n $label ]] || continue
   entry=" $label "
   length=${#entry}
@@ -103,13 +106,14 @@ while IFS=$'\t' read -r label active; do
     if ((used > 0)); then
       printf '#[bg=%s] ' "$bar_bg"
     fi
-    if [[ $active == 1 ]]; then
-      printf '#[fg=%s,bg=%s,bold]%s' "$active_fg" "$active_bg" "$entry"
-    else
-      printf '#[fg=%s,bg=%s,nobold]%s' "$inactive_fg" "$inactive_bg" "$entry"
-    fi
+    fg=$inactive_fg bg=$inactive_bg weight=nobold
+    [[ $active == 1 ]] && fg=$active_fg bg=$active_bg weight=bold
+    # A window whose agent needs the user stands out on the selection color;
+    # the regular foreground keeps it readable.
+    [[ $attention == 1 ]] && fg=$inactive_fg bg=$attention_bg weight=bold
+    printf '#[fg=%s,bg=%s,%s]%s' "$fg" "$bg" "$weight" "$entry"
   fi
   used=$((used + length))
-done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}')
+done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}	#{@agent_attention}')
 
 printf '#[default]'
