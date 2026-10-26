@@ -4,11 +4,13 @@ dotfiles_tmux_auto_start() {
        command -v tmux >/dev/null 2>&1; then
         # Reuse a session no client is attached to (e.g. left by a closed
         # terminal) so they don't pile up; the most recently active one wins.
+        # A new window there keeps the directory the terminal opened in (e.g.
+        # a folder from a file manager); stale windows are easy to close.
         local session
         session=$(tmux list-sessions -F '#{session_attached} #{session_activity} #{session_id}' 2>/dev/null |
             awk '$1 == 0 && (id == "" || $2 > best) { best = $2; id = $3 } END { print id }')
         if [[ -n $session ]]; then
-            tmux -u attach-session -t "$session"
+            tmux -u new-window -t "$session:" -c "$PWD" \; attach-session -t "$session"
         else
             tmux -u new-session
         fi

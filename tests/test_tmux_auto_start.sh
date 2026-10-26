@@ -28,7 +28,7 @@ fail() {
 # Run the startup hook in $1 (bash or zsh) with a terminal, logging what it starts.
 auto_start() {
   rm -f "$TMP/log"
-  LOG_ONLY=1 script -qec "$1 -c 'source \"$ROOT/home/.shell.d/tmux.sh\"; dotfiles_tmux_auto_start'" /dev/null < /dev/null > /dev/null
+  (cd "${START_DIR:-$HOME}" && LOG_ONLY=1 script -qec "$1 -c 'source \"$ROOT/home/.shell.d/tmux.sh\"; dotfiles_tmux_auto_start'" /dev/null < /dev/null > /dev/null)
   cat "$TMP/log" 2> /dev/null
 }
 id_of() { tmux display-message -p -t "$1" '#{session_id}'; }
@@ -43,7 +43,10 @@ for sh in bash zsh; do
   tmux new-session -d -s old
   sleep 1.1
   tmux new-session -d -s recent
-  [[ $(auto_start "$sh") == "-u attach-session -t $(id_of recent)" ]] || fail "$sh: reuse newest unattached"
+  # It gets a new window in the directory the terminal opened in.
+  id=$(id_of recent)
+  [[ $(auto_start "$sh") == "-u new-window -t $id: -c $HOME ; attach-session -t $id" ]] || fail "$sh: reuse newest unattached"
+  [[ $(START_DIR=$TMP auto_start "$sh") == "-u new-window -t $id: -c $TMP ; attach-session -t $id" ]] || fail "$sh: opened in a folder"
 
   # Sessions with a client attached are left alone.
   tmux kill-session -t old
@@ -62,4 +65,4 @@ rm -f "$TMP/log"
 TMUX=x LOG_ONLY=1 script -qec "bash -c 'source \"$ROOT/home/.shell.d/tmux.sh\"; dotfiles_tmux_auto_start'" /dev/null < /dev/null > /dev/null
 [[ ! -s $TMP/log ]] || fail 'inside tmux'
 
-echo 'PASS: tmux auto-start reuses an unattached session before creating one'
+echo 'PASS: tmux auto-start opens a window in an unattached session before creating one'
