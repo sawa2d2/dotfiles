@@ -108,10 +108,16 @@ while IFS=$'\t' read -r label active attention; do
     fi
     fg=$inactive_fg bg=$inactive_bg weight=nobold
     [[ $active == 1 ]] && fg=$active_fg bg=$active_bg weight=bold
-    # A window whose agent needs the user stands out on the selection color;
-    # the regular foreground keeps it readable.
-    [[ $attention == 1 ]] && fg=$inactive_fg bg=$attention_bg weight=bold
-    printf '#[fg=%s,bg=%s,%s]%s' "$fg" "$bg" "$weight" "$entry"
+    # A window whose agent needs the user stands out in the selection color:
+    # as background, or, for the active window, as underlined text so that the
+    # active background still marks it.
+    if [[ $attention == 1 && $active == 1 ]]; then
+      fg=$attention_bg weight=bold,underscore
+    elif [[ $attention == 1 ]]; then
+      fg=$inactive_fg bg=$attention_bg weight=bold
+    fi
+    # Attributes persist across styles; end the underline with the entry.
+    printf '#[fg=%s,bg=%s,%s]%s#[nounderscore]' "$fg" "$bg" "$weight" "$entry"
   fi
   used=$((used + length))
 done < <(tmux list-windows -t "$session_id" -F '#{window_index}:#{window_name}	#{window_active}	#{@agent_attention}')

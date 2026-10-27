@@ -39,6 +39,14 @@ others=${row/",bg=$selected,"/}
 tmux set-option -wu -t test:2 @agent_attention
 [[ $(render) == "$before" ]] || fail 'attention kept after unset'
 
+# The active window keeps its background and shows attention as underlined
+# text; the underline ends with the entry.
+active_bg=$(tmux show-options -gqv @color_active)
+mark 1 'done' 1
+row=$(render)
+[[ $row == *"#[fg=$selected,bg=$active_bg,bold,underscore] 1:alpha #[nounderscore]"* ]] || fail "active attention: $row"
+tmux set-option -wu -t test:1 @agent_attention
+
 # agent-config runs @agent_status_hook after each change: it must re-sync the rows.
 hook=$(tmux show-options -gqv @agent_status_hook)
 [[ $hook == *'/bin/tmux-bin/tmux-status-windows --sync' ]] || fail "hook: $hook"
