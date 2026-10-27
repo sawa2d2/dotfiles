@@ -304,8 +304,13 @@ def save(name):
     print(f"Saved session {name}: {len(data['windows'])} windows -> {path(name)}")
 
 
-def load(name):
-    data = json.loads(path(name).read_text(encoding="utf-8"))
+def backups(name):
+    """Return the session's history snapshots, newest first."""
+    return sorted(history_dir(name).glob("*.json"), reverse=True)
+
+
+def load(name, source=None):
+    data = json.loads((source or path(name)).read_text(encoding="utf-8"))
     if data.get("version") != 1 or data.get("session") != name:
         raise ValueError("Invalid snapshot identity/version")
     windows = data.get("windows")
@@ -401,8 +406,8 @@ def activate(window_id):
         tm("set-option", "-p", "-u", "-t", pane_id, "@tload_snapshot")
     tm("set-option", "-w", "-u", "-t", window_id, "@tload_pending")
 
-def apply(name):
-    data = load(name)
+def apply(name, source=None):
+    data = load(name, source)
     windows = sorted(data["windows"], key=lambda w: w["index"])
     # Fall back for directories removed since the save instead of failing the
     # whole restore; such panes start a shell only.
@@ -554,11 +559,43 @@ def apply(name):
             tm("kill-session", "-t", stage)
 
 
+def choose_backup(name):
+    """List the session's backups and return the one picked, or None."""
+    candidates = backups(name)
+    if not candidates:
+        raise ValueError(f"No backups for session {name}")
+    latest = path(name).read_bytes() if path(name).exists() else None
+    print(f"Backups of session {name}:")
+    for number, candidate in enumerate(candidates, 1):
+        data = load(name, candidate)
+        when = datetime.fromisoformat(data["saved_at"]).astimezone()
+        names = ", ".join(
+            w["name"] for w in sorted(data["windows"], key=lambda w: w["index"])
+        )
+        same = "  (same as the latest save)" if candidate.read_bytes() == latest else ""
+        print(
+            f"  {number}) {when:%Y-%m-%d %H:%M:%S}  "
+            f"{len(data['windows'])} windows: {names}{same}"
+        )
+    answer = input(f"Restore which backup? [1-{len(candidates)}, Enter cancels] ").strip()
+    if not answer:
+        return None
+    if not answer.isdecimal() or not 1 <= int(answer) <= len(candidates):
+        raise ValueError(f"Invalid choice: {answer}")
+    return candidates[int(answer) - 1]
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("action", choices=["save", "restore", "apply", "info", "activate"])
     p.add_argument("session", nargs="?", help="defaults to current session")
     p.add_argument("-y", "--yes", action="store_true", help="skip confirmation")
+    p.add_argument(
+        "-b", "--backup", action="store_true",
+        help="restore: pick one of the session's recent backups",
+    )
+    # Internal: the snapshot file restore picked for apply.
+    p.add_argument("--from", dest="source", type=Path, help=argparse.SUPPRESS)
     # Accept -y before or after the session name (e.g. tload -y name).
     args = p.parse_intermixed_args()
     if args.action == "activate":
@@ -567,16 +604,25 @@ def main():
         activate(args.session)
         return
     name = args.session or current()
+    if args.backup and args.action != "restore":
+        raise ValueError("--backup is only for restoring")
     if args.action == "save":
         save(name)
         return
-    data = load(name)
+    if args.action == "apply":
+        apply(name, args.source)
+        return
     if args.action == "info":
+        load(name)
         info(name)
         return
-    if args.action == "apply":
-        apply(name)
-        return
+    source = None
+    if args.backup:
+        source = choose_backup(name)
+        if source is None:
+            print("Cancelled.")
+            return
+    data = load(name, source)
     print(
         f"Restore session {name} saved {data['saved_at']} ({len(data['windows'])} windows)?"
     )
@@ -600,7 +646,8 @@ def main():
         return
     with (DIR / "restore.log").open("a", encoding="utf-8") as log:
         subprocess.Popen(
-            [sys.executable, str(Path(__file__).resolve()), "apply", name],
+            [sys.executable, str(Path(__file__).resolve()), "apply", name,
+             *(["--from", str(source)] if source else [])],
             stdin=subprocess.DEVNULL,
             stdout=log,
             stderr=log,

@@ -190,5 +190,92 @@ class ArgumentTests(unittest.TestCase):
                 info.assert_called_once_with("demo")
 
 
+class BackupRestoreTests(unittest.TestCase):
+    def make_backups(self, root, name, times):
+        directory = root / "history" / name
+        directory.mkdir(parents=True)
+        for when in times:
+            data = {
+                "version": 1,
+                "session": name,
+                "saved_at": when,
+                "windows": [{"index": 1, "name": f"w{when[11:13]}", "layout": "x",
+                             "panes": [{"index": 0, "cwd": "/tmp"}]}],
+            }
+            text = json.dumps(data)
+            (directory / f"{when}.json").write_text(text)
+        (root / f"{name}.json").write_text(text)
+        return directory
+
+    def test_lists_newest_first_and_returns_choice(self):
+        times = ["2026-10-27T01:00:00+00:00", "2026-10-27T02:00:00+00:00"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = self.make_backups(root, "0", times)
+            with (
+                patch.object(tmux_session, "DIR", root),
+                patch("builtins.input", return_value="2"),
+                redirect_stdout(io.StringIO()) as out,
+            ):
+                chosen = tmux_session.choose_backup("0")
+        self.assertEqual(chosen, directory / f"{times[0]}.json")
+        lines = out.getvalue().splitlines()
+        self.assertEqual(lines[0], "Backups of session 0:")
+        self.assertIn("1 windows: w02  (same as the latest save)", lines[1])
+        self.assertIn("1 windows: w01", lines[2])
+        self.assertNotIn("same as", lines[2])
+
+    def test_empty_answer_cancels_and_bad_answer_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.make_backups(root, "0", ["2026-10-27T01:00:00+00:00"])
+            with patch.object(tmux_session, "DIR", root), redirect_stdout(io.StringIO()):
+                with patch("builtins.input", return_value=""):
+                    self.assertIsNone(tmux_session.choose_backup("0"))
+                with patch("builtins.input", return_value="9"), self.assertRaises(ValueError):
+                    tmux_session.choose_backup("0")
+
+    def test_no_backups_is_an_error(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(tmux_session, "DIR", Path(tmp)):
+            with self.assertRaises(ValueError):
+                tmux_session.choose_backup("0")
+
+    def test_restore_backup_hands_the_file_to_apply(self):
+        times = ["2026-10-27T01:00:00+00:00", "2026-10-27T02:00:00+00:00"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = self.make_backups(root, "0", times)
+            with (
+                patch.object(tmux_session, "DIR", root),
+                patch.object(tmux_session, "current", return_value="0"),
+                patch.object(tmux_session, "exists", return_value=True),
+                patch.object(tmux_session.sys, "argv", ["tmux-session", "restore", "--backup"]),
+                patch("builtins.input", side_effect=["2", "y"]),
+                patch.object(tmux_session.subprocess, "Popen") as popen,
+                redirect_stdout(io.StringIO()),
+            ):
+                tmux_session.main()
+        command = popen.call_args.args[0]
+        self.assertEqual(command[2:], ["apply", "0", "--from", str(directory / f"{times[0]}.json")])
+
+    def test_apply_restores_from_the_given_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = self.make_backups(root, "0", ["2026-10-27T01:00:00+00:00"])
+            source = directory / "2026-10-27T01:00:00+00:00.json"
+            with (
+                patch.object(tmux_session.sys, "argv",
+                             ["tmux-session", "apply", "0", "--from", str(source)]),
+                patch.object(tmux_session, "apply") as apply,
+            ):
+                tmux_session.main()
+        apply.assert_called_once_with("0", source)
+
+    def test_backup_is_only_for_restore(self):
+        with patch.object(tmux_session.sys, "argv", ["tmux-session", "info", "0", "--backup"]):
+            with self.assertRaises(ValueError):
+                tmux_session.main()
+
+
 if __name__ == "__main__":
     unittest.main()
