@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Open the current branch's open PR, or else its compare page. Never pushes:
-# gh pr create --web would offer to push an unpushed branch.
+# Open the current branch's open PR, or else its compare page; on the default
+# branch, open the repository's top page. Never pushes: gh pr create --web
+# would offer to push an unpushed branch.
 set -euo pipefail
 
 if (($# != 0)); then
@@ -13,6 +14,29 @@ branch=$(git symbolic-ref --quiet --short HEAD) || {
   exit 1
 }
 
+# Open browser without forwarding its output to the terminal.
+open_url() {
+  case "$(uname -s)" in
+  Linux)
+    nohup xdg-open "$1" > /dev/null 2>&1 < /dev/null &
+    ;;
+  Darwin)
+    open "$1" > /dev/null 2>&1
+    ;;
+  *)
+    echo "Unsupported OS: $(uname -s)" >&2
+    exit 1
+    ;;
+  esac
+}
+
+repo=$(gh repo view --json url,defaultBranchRef --jq '.url + " " + .defaultBranchRef.name')
+read -r repo_url default_branch <<< "$repo"
+if [[ $branch == "$default_branch" ]]; then
+  open_url "$repo_url"
+  exit
+fi
+
 # gh pr view fails when the branch has no PR; merged or closed PRs are history.
 state=$(gh pr view --json state --jq .state 2> /dev/null) || state=
 if [[ $state == OPEN ]]; then
@@ -23,19 +47,4 @@ if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; 
   echo "Remote branch not found: $branch (push it first)" >&2
   exit 1
 fi
-compare=$(gh repo view --json url,defaultBranchRef --jq '.url + "/compare/" + .defaultBranchRef.name')
-url="$compare...$branch?expand=1"
-
-# Open browser without forwarding its output to the terminal.
-case "$(uname -s)" in
-Linux)
-  nohup xdg-open "$url" > /dev/null 2>&1 < /dev/null &
-  ;;
-Darwin)
-  open "$url" > /dev/null 2>&1
-  ;;
-*)
-  echo "Unsupported OS: $(uname -s)" >&2
-  exit 1
-  ;;
-esac
+open_url "$repo_url/compare/$default_branch...$branch?expand=1"

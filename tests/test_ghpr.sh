@@ -20,7 +20,7 @@ case "$1 $2" in
     printf '%s\n' "$GH_PR_STATE"
   fi
   ;;
-"repo view") echo 'https://github.com/owner/repo/compare/main' ;;
+"repo view") echo 'https://github.com/owner/repo main' ;;
 *) exit 1 ;;
 esac
 EOF
@@ -38,6 +38,7 @@ cd "$TMP/repo"
 git -c user.name=Test -c user.email=test@example.com commit -q --allow-empty -m base
 git clone -q --bare . "$TMP/origin.git"
 git remote add origin "$TMP/origin.git"
+git push -q origin main
 git switch -q -c feat/x
 git push -q origin feat/x
 
@@ -53,6 +54,16 @@ run() {
   done
   return "$status"
 }
+
+# The default branch has no PR of its own: open the repository's top page.
+git switch -q main
+run OPEN
+grep -qx 'open https://github.com/owner/repo' "$LOG"
+if grep -q 'pr view' "$LOG"; then
+  echo 'FAIL: default branch looked up a PR' >&2
+  exit 1
+fi
+git switch -q feat/x
 
 run OPEN
 grep -qx 'gh pr view --web' "$LOG"
@@ -73,4 +84,4 @@ if grep -q -e 'pr create' -e '^open ' "$LOG"; then
 fi
 [[ -z $(git ls-remote --heads origin feat/local) ]]
 
-echo 'PASS: ghpr opens an open PR, otherwise the compare page, without pushing'
+echo 'PASS: ghpr opens an open PR, otherwise the compare page (the top page on the default branch), without pushing'
