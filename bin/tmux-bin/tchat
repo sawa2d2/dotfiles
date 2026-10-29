@@ -119,7 +119,7 @@ def pick_file(token):
 
 
 def show_picker(token, phase):
-    # tmux replaces %% with the selected pane ID in display-panes -C.
+    # tmux replaces %% in the display-panes template with the selected pane ID.
     # A detached run-shell lets the callback start the next selection.
     command = (
         "run-shell -b '"
@@ -132,7 +132,7 @@ def show_picker(token, phase):
         + phase
         + " %%'"
     )
-    subprocess.run(["tmux", "display-panes", "-d", "10000", "-C", command], check=True)
+    subprocess.run(["tmux", "display-panes", "-d", "10000", command], check=True)
 
 
 def pick(token, phase, selected):
@@ -143,13 +143,13 @@ def pick(token, phase, selected):
     if len(fields) not in (2, 3) or fields[0] not in ("once", "on"):
         path.unlink(missing_ok=True)
         return
-    action, created = fields
+    action, created = fields[:2]
     if time.time() - float(created) > 60:
         path.unlink(missing_ok=True)
         return
     selected = pane(selected)
     if phase == "source":
-        path.write_text(action + "\\n" + created + "\\n" + selected + "\\n")
+        path.write_text(action + "\n" + created + "\n" + selected + "\n")
         show_picker(token, "destination")
         return
     if phase == "destination" and len(fields) == 3:
@@ -194,7 +194,7 @@ def main():
             parser.error("interactive pane selection requires a tmux client")
         STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
         token = uuid.uuid4().hex
-        pick_file(token).write_text(args.action + "\\n" + str(time.time()) + "\\n")
+        pick_file(token).write_text(args.action + "\n" + str(time.time()) + "\n")
         show_picker(token, "source")
         return
     if args.action in ("once", "on") and (args.source is None or args.destination is None):
