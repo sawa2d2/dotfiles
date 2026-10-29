@@ -140,7 +140,7 @@ def pick(token, phase, selected):
     if not path.exists():
         return
     fields = path.read_text().splitlines()
-    if len(fields) != 2 or fields[0] not in ("once", "on"):
+    if len(fields) not in (2, 3) or fields[0] not in ("once", "on"):
         path.unlink(missing_ok=True)
         return
     action, created = fields
