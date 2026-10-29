@@ -68,6 +68,27 @@ cannot override that root directory.
 Unsaved buffer contents and running terminal processes are **not** preserved;
 save your files before quitting.
 
+
+## tmux pane forwarding (tchat)
+
+`tchat` forwards text from one tmux pane to another. It is a generic local
+transport; it does **not** understand when an AI response is complete.
+
+```bash
+tmux display-message -p '#{pane_id}'  # run in each pane to find its ID
+tchat once %1 %2    # send current source-pane snapshot once
+tchat on %1 %2      # watch %1 and forward changed snapshots after 2s idle
+tchat status %1
+tchat off %1        # stop the watcher
+```
+
+Forwarding is one-way. Do not enable opposite-direction watchers simultaneously:
+that can create feedback loops. The continuous mode forwards a bounded snapshot
+of the source pane's visible history, not just an AI answer; use it only with
+trusted panes and review the receiving agent's permissions. For reliable
+answer-only forwarding, an AI-specific completion hook belongs in agent-config,
+not this generic tmux utility. Requires Python 3 and tmux.
+
 ## Installing dependencies
 
 ### Nix installation
