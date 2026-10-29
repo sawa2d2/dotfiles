@@ -76,8 +76,10 @@ transport; it does **not** understand when an AI response is complete.
 
 ```bash
 tmux display-message -p '#{pane_id}'  # run in each pane to find its ID
-tchat once %1 %2    # send current source-pane snapshot once
-tchat on %1 %2      # watch %1 and forward changed snapshots after 2s idle
+tchat once          # select source and destination using pane-number overlays
+tchat once %1 %2    # alternatively specify pane IDs explicitly
+tchat on            # select panes interactively and start forwarding
+tchat on %1 %2      # alternatively specify IDs explicitly
 tchat status %1
 tchat off %1        # stop the watcher
 ```
