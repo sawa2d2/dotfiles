@@ -11,6 +11,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 
 STATE = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/tchat-{os.getuid()}") / "dotfiles-tchat"
 POLL = 0.7
@@ -112,6 +113,58 @@ def watch(source, dest):
             path.unlink()
 
 
+
+def pick_file(token):
+    return STATE / ("pick-" + token)
+
+
+def show_picker(token, phase):
+    # tmux replaces %% with the selected pane ID in display-panes -C.
+    # A detached run-shell lets the callback start the next selection.
+    command = (
+        "run-shell -b '"
+        + sys.executable
+        + " "
+        + os.path.realpath(__file__)
+        + " _pick "
+        + token
+        + " "
+        + phase
+        + " %%'"
+    )
+    subprocess.run(["tmux", "display-panes", "-d", "10000", "-C", command], check=True)
+
+
+def pick(token, phase, selected):
+    path = pick_file(token)
+    if not path.exists():
+        return
+    fields = path.read_text().splitlines()
+    if len(fields) != 2 or fields[0] not in ("once", "on"):
+        path.unlink(missing_ok=True)
+        return
+    action, created = fields
+    if time.time() - float(created) > 60:
+        path.unlink(missing_ok=True)
+        return
+    selected = pane(selected)
+    if phase == "source":
+        path.write_text(action + "\\n" + created + "\\n" + selected + "\\n")
+        show_picker(token, "destination")
+        return
+    if phase == "destination" and len(fields) == 3:
+        source = fields[2]
+        path.unlink(missing_ok=True)
+        if source != selected:
+            subprocess.Popen(
+                [sys.executable, os.path.realpath(__file__), action, source, selected],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Forward output between two tmux panes (one-way)."
@@ -119,15 +172,33 @@ def main():
     sub = parser.add_subparsers(dest="action", required=True)
     for action in ("once", "on"):
         p = sub.add_parser(action)
-        p.add_argument("source", help="source tmux pane target, e.g. %%1")
-        p.add_argument("destination", help="destination tmux pane target, e.g. %%2")
+        p.add_argument("source", nargs="?", help="source tmux pane target, e.g. %%1")
+        p.add_argument("destination", nargs="?", help="destination tmux pane target, e.g. %%2")
     for action in ("off", "status"):
         p = sub.add_parser(action)
         p.add_argument("source", help="source pane target")
     hidden = sub.add_parser("_watch", help=argparse.SUPPRESS)
     hidden.add_argument("source")
     hidden.add_argument("destination")
+    picker = sub.add_parser("_pick", help=argparse.SUPPRESS)
+    picker.add_argument("token")
+    picker.add_argument("phase", choices=("source", "destination"))
+    picker.add_argument("selected")
     args = parser.parse_args()
+
+    if args.action == "_pick":
+        pick(args.token, args.phase, args.selected)
+        return
+    if args.action in ("once", "on") and args.source is None and args.destination is None:
+        if not os.environ.get("TMUX"):
+            parser.error("interactive pane selection requires a tmux client")
+        STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+        token = uuid.uuid4().hex
+        pick_file(token).write_text(args.action + "\\n" + str(time.time()) + "\\n")
+        show_picker(token, "source")
+        return
+    if args.action in ("once", "on") and (args.source is None or args.destination is None):
+        parser.error("specify both source and destination, or neither")
 
     if args.action in ("once", "on", "_watch"):
         src, dst = pane(args.source), pane(args.destination)
