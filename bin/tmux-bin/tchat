@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Forward tmux pane output to another pane, on demand or continuously.
+
+This is a local tmux transport, not an AI protocol. Only use with trusted panes.
+"""
+import argparse
+import hashlib
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+import time
+
+STATE = Path(os.environ.get("XDG_RUNTIME_DIR") or f"/tmp/tchat-{os.getuid()}") / "dotfiles-tchat"
+POLL = 0.7
+QUIET = 2.0
+MAX_BYTES = 12000
+
+
+def tmux(*args):
+    return subprocess.check_output(["tmux", *args], text=True, stderr=subprocess.PIPE)
+
+
+def pane(target):
+    return tmux("display-message", "-p", "-t", target, "#{pane_id}").strip()
+
+
+def capture(target):
+    # -J joins wrapped lines; ANSI escapes are omitted.
+    return tmux("capture-pane", "-p", "-J", "-S", "-120", "-t", target).rstrip()
+
+
+def send(target, body):
+    if not body.strip():
+        return
+    # tmux send-keys -l sends literal text, never interprets key names.
+    # Bracketed paste is deliberately not used: some CLIs treat it differently.
+    subprocess.run(["tmux", "send-keys", "-t", target, "-l", "--", body], check=True)
+    subprocess.run(["tmux", "send-keys", "-t", target, "Enter"], check=True)
+
+
+def payload(snapshot):
+    data = snapshot.encode("utf-8")
+    if len(data) > MAX_BYTES:
+        snapshot = data[-MAX_BYTES:].decode("utf-8", errors="ignore")
+    return snapshot
+
+
+def forward(source, dest, snapshot):
+    if not snapshot.strip():
+        return False
+    body = payload(snapshot)
+    send(dest, "Message forwarded from tmux pane " + source + ":\n" + body)
+    return True
+
+
+def state_file(source):
+    return STATE / (source.replace("%", "pane-") + ".pid")
+
+
+def running(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def stop(source):
+    path = state_file(source)
+    try:
+        pid = int(path.read_text().strip())
+    except (FileNotFoundError, ValueError):
+        print("tchat: no forwarding process")
+        return
+    if running(pid):
+        # Guard against PID reuse: require a matching Linux/macOS process command.
+        try:
+            cmd = subprocess.check_output(["ps", "-p", str(pid), "-o", "command="], text=True)
+        except subprocess.CalledProcessError:
+            cmd = ""
+        if "tchat" in cmd and "_watch" in cmd:
+            os.kill(pid, signal.SIGTERM)
+        else:
+            print("tchat: stale PID; refusing to signal unrelated process", file=sys.stderr)
+    path.unlink(missing_ok=True)
+
+
+def watch(source, dest):
+    path = state_file(source)
+    path.write_text(str(os.getpid()))
+    try:
+        last = capture(source)
+        changed = time.monotonic()
+        delivered = hashlib.sha256(last.encode()).digest()
+        while True:
+            current = capture(source)
+            now = time.monotonic()
+            if current != last:
+                last = current
+                changed = now
+            digest = hashlib.sha256(current.encode()).digest()
+            if current.strip() and digest != delivered and now - changed >= QUIET:
+                forward(source, dest, current)
+                delivered = digest
+            time.sleep(POLL)
+    finally:
+        if path.exists() and path.read_text().strip() == str(os.getpid()):
+            path.unlink()
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Forward output between two tmux panes (one-way)."
+    )
+    sub = parser.add_subparsers(dest="action", required=True)
+    for action in ("once", "on"):
+        p = sub.add_parser(action)
+        p.add_argument("source", help="source tmux pane target, e.g. %%1")
+        p.add_argument("destination", help="destination tmux pane target, e.g. %%2")
+    for action in ("off", "status"):
+        p = sub.add_parser(action)
+        p.add_argument("source", help="source pane target")
+    hidden = sub.add_parser("_watch", help=argparse.SUPPRESS)
+    hidden.add_argument("source")
+    hidden.add_argument("destination")
+    args = parser.parse_args()
+
+    if args.action in ("once", "on", "_watch"):
+        src, dst = pane(args.source), pane(args.destination)
+        if src == dst:
+            parser.error("source and destination must differ")
+        if args.action == "once":
+            forward(src, dst, capture(src))
+            return
+        if args.action == "_watch":
+            watch(src, dst)
+            return
+        STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
+        path = state_file(src)
+        if path.exists():
+            try:
+                old_pid = int(path.read_text())
+            except ValueError:
+                old_pid = 0
+            if old_pid and running(old_pid):
+                parser.error("source already has a watcher; use 'off' first")
+            path.unlink(missing_ok=True)
+        proc = subprocess.Popen(
+            [sys.executable, os.path.realpath(__file__), "_watch", src, dst],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        # Ensure watcher has started or report early failure.
+        time.sleep(0.15)
+        if proc.poll() is not None:
+            parser.error("watcher failed to start")
+        print(f"tchat: forwarding {src} -> {dst} (pid {proc.pid})")
+        return
+
+    src = pane(args.source)
+    if args.action == "off":
+        stop(src)
+    else:
+        path = state_file(src)
+        try:
+            pid = int(path.read_text())
+        except (FileNotFoundError, ValueError):
+            pid = 0
+        print(f"tchat: {src} {'on (pid ' + str(pid) + ')' if pid and running(pid) else 'off'}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (subprocess.CalledProcessError, OSError) as exc:
+        print(f"tchat: {exc}", file=sys.stderr)
+        sys.exit(1)
