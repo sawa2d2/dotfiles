@@ -3,7 +3,8 @@
 {
   home.stateVersion = "26.05";
 
-  # CLI packages only; existing dotfiles remain unmanaged by Home Manager.
+  # CLI packages, plus mpv on Linux; existing dotfiles remain unmanaged by
+  # Home Manager.
   home.packages = with pkgs; [
     fzf
     delta
@@ -24,6 +25,10 @@
     blesh
     # Claude Code /copy and image paste use xclip (not xsel), e.g. over ssh -X.
     xclip
+    # Ubuntu's mpv is too old for the private.d mpv.conf. Without nixGL it
+    # cannot load the host GPU drivers and renders in software, which is
+    # all ssh -X offers anyway.
+    mpv
   ];
 
   # Neovim plugins, installed in the native package discovery path.
