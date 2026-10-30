@@ -30,6 +30,19 @@ open_url() {
   esac
 }
 
+# Percent-encode a branch name for a URL path; / stays as the separator.
+urlencode() {
+  local LC_ALL=C s=$1 out='' c i
+  for ((i = 0; i < ${#s}; i++)); do
+    c=${s:i:1}
+    case $c in
+    [A-Za-z0-9._~/-]) out+=$c ;;
+    *) out+=$(printf '%%%02X' "'$c") ;;
+    esac
+  done
+  printf '%s\n' "$out"
+}
+
 repo=$(gh repo view --json url,defaultBranchRef --jq '.url + " " + .defaultBranchRef.name')
 read -r repo_url default_branch <<< "$repo"
 if [[ $branch == "$default_branch" ]]; then
@@ -47,4 +60,4 @@ if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; 
   echo "Remote branch not found: $branch (push it first)" >&2
   exit 1
 fi
-open_url "$repo_url/compare/$default_branch...$branch?expand=1"
+open_url "$repo_url/compare/$(urlencode "$default_branch")...$(urlencode "$branch")?expand=1"

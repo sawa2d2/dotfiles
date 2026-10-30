@@ -72,6 +72,16 @@ for state in '' MERGED CLOSED; do
   grep -qx 'open https://github.com/owner/repo/compare/main...feat/x?expand=1' "$LOG"
 done
 
+# URL-special characters in the branch name are percent-encoded; / is kept.
+git switch -q -c 'feat/a#b%c&d+e猫'
+git push -q origin HEAD
+run ''
+grep -qx 'open https://github.com/owner/repo/compare/main...feat/a%23b%25c%26d%2Be%E7%8C%AB?expand=1' "$LOG" || {
+  echo "FAIL: branch name not encoded: $(cat "$LOG")" >&2
+  exit 1
+}
+git switch -q feat/x
+
 # Never push: an unpushed branch is an error, not a push prompt.
 git switch -q -c feat/local
 status=0
