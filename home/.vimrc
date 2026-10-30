@@ -393,5 +393,6 @@ let g:ale_fixers = {
 \ 'python': ['ruff', 'ruff_format'],
 \ 'sh': ['shfmt'],
 \ 'bash': ['shfmt'],
+\ 'json': ['jq'],
 \}
 let g:ale_sh_shfmt_options = '-i 2 -ci -sr'
