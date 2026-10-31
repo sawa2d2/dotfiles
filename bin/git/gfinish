@@ -152,67 +152,62 @@ if git diff --quiet main "$feature"; then
   exit 1
 fi
 
-# When running inside an additional worktree, integrate through the primary main worktree.
-if [[ $current != "$primary" ]]; then
-  if [[ $(git -C "$primary" symbolic-ref --quiet --short HEAD || true) != main ]]; then
-    echo "The primary worktree must be on main: $primary" >&2
-    exit 1
-  fi
-  if [[ -n $(git -C "$primary" status --porcelain) ]]; then
-    echo "The primary main worktree must be clean: $primary" >&2
-    exit 1
-  fi
+# main may be checked out in any worktree, or in none. Squash in a temporary
+# detached worktree so no checkout changes until the commit succeeds.
+if [[ -n $main_worktree && -n $(git -C "$main_worktree" status --porcelain) ]]; then
+  echo "Main worktree has uncommitted changes: $main_worktree" >&2
+  exit 1
+fi
 
+if [[ $current == "$primary" ]]; then
+  echo "Squash $feature into main, then push and remove the local branch."
+else
   echo "Squash $feature into main, push, and remove its worktree."
-  git diff --stat main "$feature"
-  confirm "Continue?" || exit 0
+fi
+git diff --stat main "$feature"
+confirm "Continue?" || exit 0
 
-  # A detached temporary worktree keeps main unchanged until the squash commit succeeds.
-  temporary=$(mktemp -d)
-  rmdir "$temporary"
-  git worktree add --detach "$temporary" main
-  if ! git -C "$temporary" merge --squash "$feature"; then
-    echo "Squash failed in $temporary. Resolve or remove that worktree manually." >&2
-    exit 1
+old_main=$(git rev-parse main)
+temporary=$(mktemp -d)
+rmdir "$temporary"
+git worktree add -q --detach "$temporary" main
+# The temporary checkout holds nothing but the squash, so drop it on failure.
+if ! git -C "$temporary" merge --squash "$feature"; then
+  git worktree remove --force "$temporary"
+  echo "Squash of $feature into main failed; merge main into $feature first." >&2
+  exit 1
+fi
+if ! commit_squash "$temporary"; then
+  git worktree remove --force "$temporary"
+  echo "Squash commit was not made; main is unchanged." >&2
+  exit 1
+fi
+result=$(git -C "$temporary" rev-parse HEAD)
+git worktree remove "$temporary"
+
+# Advance main where it lives: fast-forward its worktree, or move the ref
+# (only if it still points where it did) when nothing has it checked out.
+if [[ -n $main_worktree ]]; then
+  git -C "$main_worktree" merge --ff-only "$result"
+else
+  git update-ref refs/heads/main "$result" "$old_main"
+fi
+git push origin main
+
+if [[ $current == "$primary" ]]; then
+  # A branch can be checked out in one worktree only.
+  if [[ -n $main_worktree ]]; then
+    git switch -q --detach main
+    echo "main is checked out in $main_worktree; left $current detached at main."
+  else
+    git switch -q main
   fi
-  commit_squash "$temporary"
-  result=$(git -C "$temporary" rev-parse HEAD)
-  git -C "$primary" merge --ff-only "$result"
-  git push origin main
-  git worktree remove "$temporary"
-
+else
   # Move the helper process away before deleting its current worktree.
   cd -- "$primary"
   # Do not force-remove: if the feature worktree acquired changes, preserve them.
   git worktree remove "$current"
-  git branch -D "$feature"
-  if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
-    if confirm "Delete remote branch origin/$feature?"; then
-      git push origin --delete "$feature"
-    fi
-  fi
-  echo "Finished: $feature -> main"
-  exit 0
 fi
-
-echo "Squash $feature into main, then push and remove the local branch."
-git diff --stat main "$feature"
-confirm "Continue?" || exit 0
-
-# Keep the original feature history intact, including when it has been pushed.
-temporary="gfinish-$$"
-git switch -c "$temporary" main
-if ! git merge --squash "$feature"; then
-  echo "Squash failed on $temporary. Resolve or abort before retrying." >&2
-  exit 1
-fi
-commit_squash .
-
-git switch main
-git merge --ff-only "$temporary"
-git push origin main
-
-git branch -d "$temporary"
 git branch -D "$feature"
 
 if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
