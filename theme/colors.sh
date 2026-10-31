@@ -1,3 +1,4 @@
+# shellcheck disable=SC2034 # the variables are read by the scripts that source this file
 # Shared palette (single source of truth).
 # Theme is selected by the required argument to theme/sync.
 # Available: teal, violet, orange, blue
@@ -37,6 +38,7 @@ green)
   ;;
 *)
   printf 'Unknown theme variant: %s\n' "$THEME_VARIANT" >&2
+  # shellcheck disable=SC2317 # return when sourced, exit when executed
   return 1 2> /dev/null || exit 1
   ;;
 esac

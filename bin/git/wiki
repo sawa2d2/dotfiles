@@ -1,5 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 owner_repo=$(show-owner-and-repo)
-echo $owner_repo
-git clone git@github.com:${owner_repo}.wiki.git .wiki
+echo "$owner_repo"
+git clone "git@github.com:${owner_repo}.wiki.git" .wiki

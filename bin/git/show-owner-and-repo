@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 repo_url=$(git config --get remote.origin.url)
 

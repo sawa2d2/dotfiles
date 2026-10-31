@@ -16,7 +16,8 @@ export LANG=en_US.UTF-8
 export LANGUAGE=en_US:en
 
 # Resolve dotfiles root and load shared initialization
-export DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+DOTPATH="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
+export DOTPATH
 # Load private configuration
 [[ -f "$DOTPATH/private.d/home/.bashrc" ]] &&
   source "$DOTPATH/private.d/home/.bashrc"

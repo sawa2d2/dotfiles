@@ -14,7 +14,7 @@ cwhich() {
 
   local target
   target=$("$DOTPATH/bin/which-basedir" "$1") || return
-  cd -- "$target"
+  cd -- "$target" || return
 }
 
 # Directory operations
@@ -82,6 +82,6 @@ gfinish() {
   primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p') || return
   command gfinish "$@" || return
   if [[ ! -d $current ]]; then
-    cd -- "$primary"
+    cd -- "$primary" || return
   fi
 }

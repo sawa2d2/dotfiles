@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Run OpenTofu when installed, otherwise Terraform. TF_BIN forces either one.
 if [[ -n ${TF_BIN:-} ]]; then
   exec "$TF_BIN" "$@"

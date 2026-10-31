@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 node=$1
 function show_taint() {
@@ -8,6 +8,6 @@ if [[ -z $node ]]; then
   show_taint
   exit 0
 fi
-oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoExecute
-oc adm taint nodes $node node.kubernetes.io/out-of-service=nodeshutdown:NoSchedule
+oc adm taint nodes "$node" node.kubernetes.io/out-of-service=nodeshutdown:NoExecute
+oc adm taint nodes "$node" node.kubernetes.io/out-of-service=nodeshutdown:NoSchedule
 show_taint

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 function usage() {
   echo "Usage:"
@@ -24,7 +24,7 @@ if ! oc get service "$SERVICE" -n "$NAMESPACE" > /dev/null 2>&1; then
   exit 1
 fi
 
-oc get service $SERVICE -n $NAMESPACE -o yaml |
+oc get service "$SERVICE" -n "$NAMESPACE" -o yaml |
   yq e 'del(.spec.allocateLoadBalancerNodePorts)' |
   yq e '.metadata.name += "-external"' |
   yq e 'del(.spec.clusterIP)' |

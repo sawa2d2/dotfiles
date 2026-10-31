@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -ueC
 
 SHARED_DIR="${SHARED_DIR:-/mnt/ext/shared}"
