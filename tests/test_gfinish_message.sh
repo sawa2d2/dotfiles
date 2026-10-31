@@ -33,7 +33,7 @@ check_finish() {
 
 check_finish feat/separator 'Fix: hoge fuga' -- Fix: hoge fuga
 check_finish feat/legacy 'Fix: original syntax' -m 'Fix: original syntax'
-check_finish feat/default 'feat: default' 
+check_finish feat/default 'feat: default'
 
 git switch -q -c feat/invalid
 if "$gfinish" -y -- > /dev/null 2>&1; then

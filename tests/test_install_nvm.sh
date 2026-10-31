@@ -8,7 +8,7 @@ export HOME="$tmp/home"
 # Never let inherited NVM_DIR point tests at a real installation.
 export NVM_DIR="$HOME/.nvm"
 mkdir -p "$HOME" "$tmp/bin"
-cat > "$tmp/bin/git" <<'GIT'
+cat > "$tmp/bin/git" << 'GIT'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "$HOME/git-calls"

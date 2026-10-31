@@ -5,31 +5,34 @@ set -euo pipefail
 version=v0.40.8
 destination="${NVM_DIR:-$HOME/.nvm}"
 
-if (( $# > 1 )) || { (( $# == 1 )) && [[ $1 != --dry-run ]]; }; then
-    echo 'Usage: install-nvm [--dry-run]' >&2
-    exit 2
+if (($# > 1)) || { (($# == 1)) && [[ $1 != --dry-run ]]; }; then
+  echo 'Usage: install-nvm [--dry-run]' >&2
+  exit 2
 fi
 
 if [[ -e $destination || -L $destination ]]; then
-    # File existence alone does not establish a working nvm installation.
-    if [[ -f $destination/nvm.sh ]] &&
-       NVM_DIR="$destination" bash -c '
+  # File existence alone does not establish a working nvm installation.
+  if [[ -f $destination/nvm.sh ]] &&
+    NVM_DIR="$destination" bash -c '
          source "$NVM_DIR/nvm.sh" &&
          type nvm >/dev/null 2>&1 &&
          nvm --version >/dev/null 2>&1
        '; then
-        echo "SKIP: nvm already installed at $destination"
-        exit 0
-    fi
-    echo "ERROR: $destination exists but nvm is not functional; refusing to overwrite." >&2
-    echo "Inspect its contents and move it aside before retrying." >&2
-    exit 1
+    echo "SKIP: nvm already installed at $destination"
+    exit 0
+  fi
+  echo "ERROR: $destination exists but nvm is not functional; refusing to overwrite." >&2
+  echo "Inspect its contents and move it aside before retrying." >&2
+  exit 1
 fi
 
 echo "Install nvm $version -> $destination"
 [[ ${1:-} == --dry-run ]] && exit 0
 
-command -v git >/dev/null 2>&1 || { echo 'Git is required to install nvm.' >&2; exit 1; }
+command -v git > /dev/null 2>&1 || {
+  echo 'Git is required to install nvm.' >&2
+  exit 1
+}
 mkdir -p -- "$(dirname -- "$destination")"
 stage=$(mktemp -d "$(dirname -- "$destination")/.nvm-stage.XXXXXXXX")
 trap 'rm -rf -- "$stage"' EXIT
@@ -40,12 +43,12 @@ if ! NVM_DIR="$stage/repo" bash -c '
     type nvm >/dev/null 2>&1 &&
     [[ $(nvm --version) == "${1#v}" ]]
 ' _ "$version"; then
-    echo 'Downloaded nvm failed version verification.' >&2
-    exit 1
+  echo 'Downloaded nvm failed version verification.' >&2
+  exit 1
 fi
 if [[ -e $destination || -L $destination ]]; then
-    echo "Destination appeared during installation: $destination" >&2
-    exit 1
+  echo "Destination appeared during installation: $destination" >&2
+  exit 1
 fi
 mv -- "$stage/repo" "$destination"
 echo "Installed nvm $version; open a new shell to use it."

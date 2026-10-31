@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """Regression tests for tmux-session's allowlisted process restoration."""
-from contextlib import redirect_stderr, redirect_stdout
+
 import importlib.util
 import io
 import json
-import tempfile
-from importlib.machinery import SourceFileLoader
-import unittest
-from unittest.mock import patch
 import subprocess
+import tempfile
+import unittest
+from contextlib import redirect_stderr, redirect_stdout
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).resolve().parents[1] / "bin/tmux-bin/tmux-session"
-spec = importlib.util.spec_from_loader("tmux_session", SourceFileLoader("tmux_session", str(SCRIPT)))
+spec = importlib.util.spec_from_loader(
+    "tmux_session", SourceFileLoader("tmux_session", str(SCRIPT))
+)
 tmux_session = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tmux_session)
 
@@ -70,14 +73,28 @@ class MacOSProcessTests(unittest.TestCase):
         )
         self.assertEqual(
             tmux_session.macos_process_rows(rows, 610)[0],
-            (610, ["node", "/Users/test/.nvm/bin/bob", "chat", "--resume", "latest", "--auto-approve"]),
+            (
+                610,
+                [
+                    "node",
+                    "/Users/test/.nvm/bin/bob",
+                    "chat",
+                    "--resume",
+                    "latest",
+                    "--auto-approve",
+                ],
+            ),
         )
 
     def test_macos_foreground_lookup_and_restore(self):
         outputs = [
             subprocess.CompletedProcess([], 0, "610\n", ""),
-            subprocess.CompletedProcess([], 0,
-                "500 500 -zsh\n610 610 node /Users/test/.nvm/bin/bob chat --resume latest --auto-approve\n", ""),
+            subprocess.CompletedProcess(
+                [],
+                0,
+                "500 500 -zsh\n610 610 node /Users/test/.nvm/bin/bob chat --resume latest --auto-approve\n",
+                "",
+            ),
         ]
         with patch.object(tmux_session.subprocess, "run", side_effect=outputs) as run:
             pane = tmux_session.macos_foreground_process(500, "node")
@@ -90,7 +107,8 @@ class MacOSProcessTests(unittest.TestCase):
 
     def test_macos_ps_failure_is_nonfatal(self):
         with patch.object(
-            tmux_session.subprocess, "run",
+            tmux_session.subprocess,
+            "run",
             side_effect=subprocess.CalledProcessError(1, ["ps"]),
         ):
             self.assertEqual(
@@ -101,7 +119,8 @@ class MacOSProcessTests(unittest.TestCase):
     def test_macos_dispatch(self):
         with patch.object(tmux_session.sys, "platform", "darwin"):
             with patch.object(
-                tmux_session, "macos_foreground_process",
+                tmux_session,
+                "macos_foreground_process",
                 return_value={"command": "node", "argv": ["node", "bob"]},
             ) as probe:
                 self.assertEqual(
@@ -119,9 +138,11 @@ class SaveHistoryTests(unittest.TestCase):
                 {"version": 1, "session": "a/b", "saved_at": str(i), "windows": [{}]}
                 for i in range(7)
             ]
-            with patch.object(tmux_session, "DIR", root), patch.object(
-                tmux_session, "snapshot", side_effect=snapshots
-            ), redirect_stdout(io.StringIO()):
+            with (
+                patch.object(tmux_session, "DIR", root),
+                patch.object(tmux_session, "snapshot", side_effect=snapshots),
+                redirect_stdout(io.StringIO()),
+            ):
                 for _ in snapshots:
                     tmux_session.save("a/b")
 
@@ -133,7 +154,9 @@ class SaveHistoryTests(unittest.TestCase):
                 ["2", "3", "4", "5", "6"],
             )
             # History must not appear as a session snapshot next to the main files.
-            self.assertEqual(sorted(p.name for p in root.glob("*.json")), ["a%2Fb.json"])
+            self.assertEqual(
+                sorted(p.name for p in root.glob("*.json")), ["a%2Fb.json"]
+            )
 
 
 class MissingDirectoryTests(unittest.TestCase):
@@ -154,7 +177,9 @@ class MissingDirectoryTests(unittest.TestCase):
             if args[:2] == ["tmux", "show-options"] and args[-1] == "@tload_pending":
                 return subprocess.CompletedProcess(args, 0, "1\n", "")
             value = options.get(args[-1])
-            return subprocess.CompletedProcess(args, 0 if value else 1, f"{value}\n", "")
+            return subprocess.CompletedProcess(
+                args, 0 if value else 1, f"{value}\n", ""
+            )
 
         calls = []
 
@@ -199,8 +224,14 @@ class BackupRestoreTests(unittest.TestCase):
                 "version": 1,
                 "session": name,
                 "saved_at": when,
-                "windows": [{"index": 1, "name": f"w{when[11:13]}", "layout": "x",
-                             "panes": [{"index": 0, "cwd": "/tmp"}]}],
+                "windows": [
+                    {
+                        "index": 1,
+                        "name": f"w{when[11:13]}",
+                        "layout": "x",
+                        "panes": [{"index": 0, "cwd": "/tmp"}],
+                    }
+                ],
             }
             text = json.dumps(data)
             (directory / f"{when}.json").write_text(text)
@@ -229,14 +260,23 @@ class BackupRestoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self.make_backups(root, "0", ["2026-10-27T01:00:00+00:00"])
-            with patch.object(tmux_session, "DIR", root), redirect_stdout(io.StringIO()):
+            with (
+                patch.object(tmux_session, "DIR", root),
+                redirect_stdout(io.StringIO()),
+            ):
                 with patch("builtins.input", return_value=""):
                     self.assertIsNone(tmux_session.choose_backup("0"))
-                with patch("builtins.input", return_value="9"), self.assertRaises(ValueError):
+                with (
+                    patch("builtins.input", return_value="9"),
+                    self.assertRaises(ValueError),
+                ):
                     tmux_session.choose_backup("0")
 
     def test_no_backups_is_an_error(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.object(tmux_session, "DIR", Path(tmp)):
+        with (
+            tempfile.TemporaryDirectory() as tmp,
+            patch.object(tmux_session, "DIR", Path(tmp)),
+        ):
             with self.assertRaises(ValueError):
                 tmux_session.choose_backup("0")
 
@@ -249,14 +289,18 @@ class BackupRestoreTests(unittest.TestCase):
                 patch.object(tmux_session, "DIR", root),
                 patch.object(tmux_session, "current", return_value="0"),
                 patch.object(tmux_session, "exists", return_value=True),
-                patch.object(tmux_session.sys, "argv", ["tmux-session", "restore", "--backup"]),
+                patch.object(
+                    tmux_session.sys, "argv", ["tmux-session", "restore", "--backup"]
+                ),
                 patch("builtins.input", side_effect=["2", "y"]),
                 patch.object(tmux_session.subprocess, "Popen") as popen,
                 redirect_stdout(io.StringIO()),
             ):
                 tmux_session.main()
         command = popen.call_args.args[0]
-        self.assertEqual(command[2:], ["apply", "0", "--from", str(directory / f"{times[0]}.json")])
+        self.assertEqual(
+            command[2:], ["apply", "0", "--from", str(directory / f"{times[0]}.json")]
+        )
 
     def test_apply_restores_from_the_given_file(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -264,15 +308,20 @@ class BackupRestoreTests(unittest.TestCase):
             directory = self.make_backups(root, "0", ["2026-10-27T01:00:00+00:00"])
             source = directory / "2026-10-27T01:00:00+00:00.json"
             with (
-                patch.object(tmux_session.sys, "argv",
-                             ["tmux-session", "apply", "0", "--from", str(source)]),
+                patch.object(
+                    tmux_session.sys,
+                    "argv",
+                    ["tmux-session", "apply", "0", "--from", str(source)],
+                ),
                 patch.object(tmux_session, "apply") as apply,
             ):
                 tmux_session.main()
         apply.assert_called_once_with("0", source)
 
     def test_backup_is_only_for_restore(self):
-        with patch.object(tmux_session.sys, "argv", ["tmux-session", "info", "0", "--backup"]):
+        with patch.object(
+            tmux_session.sys, "argv", ["tmux-session", "info", "0", "--backup"]
+        ):
             with self.assertRaises(ValueError):
                 tmux_session.main()
 

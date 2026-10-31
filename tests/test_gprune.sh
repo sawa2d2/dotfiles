@@ -25,7 +25,7 @@ git -C "$TMP/repo" commit -qm two
 git -C "$TMP/repo" push -q origin stale
 
 git -C "$TMP/repo" switch -q main
-git -C "$TMP/repo" merge --squash -q stale >/dev/null
+git -C "$TMP/repo" merge --squash -q stale > /dev/null
 git -C "$TMP/repo" commit -qm 'squash stale'
 git -C "$TMP/repo" push -q origin main
 git -C "$TMP/repo" push -q origin --delete stale
@@ -51,9 +51,15 @@ git -C "$TMP/repo" show-ref -q --verify refs/heads/main
 
 # Quiet mode is silent when nothing is eligible or origin/main is missing.
 quiet=$(cd "$TMP/repo" && "$ROOT/bin/git/gprune" --quiet 2>&1)
-[[ -z $quiet ]] || { echo "FAIL: quiet mode printed: $quiet" >&2; exit 1; }
+[[ -z $quiet ]] || {
+  echo "FAIL: quiet mode printed: $quiet" >&2
+  exit 1
+}
 git init -q -b master "$TMP/other"
 quiet=$(cd "$TMP/other" && "$ROOT/bin/git/gprune" --quiet 2>&1)
-[[ -z $quiet ]] || { echo "FAIL: quiet mode without origin/main printed: $quiet" >&2; exit 1; }
+[[ -z $quiet ]] || {
+  echo "FAIL: quiet mode without origin/main printed: $quiet" >&2
+  exit 1
+}
 
 echo 'PASS: safe squash branch cleanup'

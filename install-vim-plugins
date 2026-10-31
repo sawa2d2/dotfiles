@@ -5,7 +5,10 @@ set -euo pipefail
 plugin_dir="${HOME:?}/.vim/pack/dotfiles/start"
 dest="$plugin_dir/ale"
 
-command -v git >/dev/null 2>&1 || { echo 'git is required' >&2; exit 1; }
+command -v git > /dev/null 2>&1 || {
+  echo 'git is required' >&2
+  exit 1
+}
 mkdir -p "$plugin_dir"
 if [[ -d "$dest" || -L "$dest" ]]; then
   echo "Already present: $dest"

@@ -45,7 +45,10 @@ for sh in bash zsh; do
 done
 
 # A failed read explains how to sign in, but only when signed out.
-fresh() { rm -rf "$TMP/run/secret-cache"; bash -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN' _ "$ROOT" 2>&1; }
+fresh() {
+  rm -rf "$TMP/run/secret-cache"
+  bash -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN' _ "$ROOT" 2>&1
+}
 status=0
 out=$(OP_SIGNED_OUT=1 fresh) || status=$?
 ((status == 1)) && [[ $out == *'not signed in'*'eval "$(op signin)"'* ]] || fail 'sign-in hint'

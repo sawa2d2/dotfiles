@@ -5,151 +5,169 @@ set -euo pipefail
 DOTPATH=$(cd "$(dirname "$0")" && pwd -P)
 
 install_system() {
-    local dry_run=false
-    if [[ ${1:-} == --dry-run && $# == 1 ]]; then
-        dry_run=true
-    elif (( $# != 0 )); then
-        echo "Usage: sudo ./install --system [--dry-run]" >&2
-        return 2
-    fi
-    # macOS already resolves dotfiles commands through its existing PATH.
-    # Do not duplicate binaries or modify system configuration.
-    if [[ $(uname -s) == Darwin ]]; then
-        echo "SKIP: system installation is unnecessary on macOS (no changes)"
-        return 0
-    fi
+  local dry_run=false
+  if [[ ${1:-} == --dry-run && $# == 1 ]]; then
+    dry_run=true
+  elif (($# != 0)); then
+    echo "Usage: sudo ./install --system [--dry-run]" >&2
+    return 2
+  fi
+  # macOS already resolves dotfiles commands through its existing PATH.
+  # Do not duplicate binaries or modify system configuration.
+  if [[ $(uname -s) == Darwin ]]; then
+    echo "SKIP: system installation is unnecessary on macOS (no changes)"
+    return 0
+  fi
 
-    if [[ $dry_run == false && $EUID != 0 ]]; then
-        echo "System installation requires root" >&2
-        return 1
-    fi
+  if [[ $dry_run == false && $EUID != 0 ]]; then
+    echo "System installation requires root" >&2
+    return 1
+  fi
 
-    local src="$DOTPATH/bin"
-    [[ -d "$src" ]] || { echo "SKIP: no bin/ directory"; return 0; }
-    [[ -z $(find "$src" -type l -print -quit) ]] ||
-        { echo "Refusing symlinks within bin/" >&2; return 1; }
-
-    local name="${DOTPATH##*/}"
-    [[ $name =~ ^[a-zA-Z0-9._-]+$ ]] ||
-        { echo "Invalid repository name: $name" >&2; return 1; }
-    local parent=/usr/local/lib
-    local root="$parent/${name}-bin"
-    local profile=/etc/profile.d/dotfiles-bin.sh
-    local sudoers=/etc/sudoers.d/dotfiles-bin
-    local marker='# Managed by dotfiles install-dotfiles-bin.sh'
-    if [[ -L "$root" ]]; then
-        echo "Refusing symlinked destination: $root" >&2
-        return 1
-    fi
-    if [[ -e "$root" && ! -f "$root/.dotfiles-bin-managed" ]]; then
-        echo "Unmanaged destination: $root" >&2
-        return 1
-    fi
-    [[ $(uname -s) == Linux ]] || {
-        echo "Unsupported operating system" >&2
-        return 2
+  local src="$DOTPATH/bin"
+  [[ -d "$src" ]] || {
+    echo "SKIP: no bin/ directory"
+    return 0
+  }
+  [[ -z $(find "$src" -type l -print -quit) ]] ||
+    {
+      echo "Refusing symlinks within bin/" >&2
+      return 1
     }
 
-    if [[ -e "$profile" ]] && ! grep -qxF "$marker" "$profile"; then
-        echo "Unmanaged profile: $profile" >&2
-        return 1
-    fi
-    if [[ -e "$sudoers" ]] && ! grep -qxF "$marker" "$sudoers"; then
-        echo "Unmanaged sudoers: $sudoers" >&2
-        return 1
-    fi
-    command -v visudo >/dev/null 2>&1 ||
-        { echo "visudo is required" >&2; return 1; }
+  local name="${DOTPATH##*/}"
+  [[ $name =~ ^[a-zA-Z0-9._-]+$ ]] ||
+    {
+      echo "Invalid repository name: $name" >&2
+      return 1
+    }
+  local parent=/usr/local/lib
+  local root="$parent/${name}-bin"
+  local profile=/etc/profile.d/dotfiles-bin.sh
+  local sudoers=/etc/sudoers.d/dotfiles-bin
+  local marker='# Managed by dotfiles install-dotfiles-bin.sh'
+  if [[ -L "$root" ]]; then
+    echo "Refusing symlinked destination: $root" >&2
+    return 1
+  fi
+  if [[ -e "$root" && ! -f "$root/.dotfiles-bin-managed" ]]; then
+    echo "Unmanaged destination: $root" >&2
+    return 1
+  fi
+  [[ $(uname -s) == Linux ]] || {
+    echo "Unsupported operating system" >&2
+    return 2
+  }
 
-    # Unprivileged dry-run cannot reliably read sudo's secure_path.
-    # Report the planned destinations without claiming sudoers validation.
-    if [[ $dry_run == true && $EUID != 0 ]]; then
-        echo "Copy $src -> $root"
-        echo "Update $profile and $sudoers"
-        echo "(dry-run; sudo secure_path not checked; use sudo ./install --system --dry-run)"
-        return 0
-    fi
+  if [[ -e "$profile" ]] && ! grep -qxF "$marker" "$profile"; then
+    echo "Unmanaged profile: $profile" >&2
+    return 1
+  fi
+  if [[ -e "$sudoers" ]] && ! grep -qxF "$marker" "$sudoers"; then
+    echo "Unmanaged sudoers: $sudoers" >&2
+    return 1
+  fi
+  command -v visudo > /dev/null 2>&1 ||
+    {
+      echo "visudo is required" >&2
+      return 1
+    }
 
-    local original candidate dir entry managed_root stage backup='' stage_sudo
-    local -a path_entries=() clean_entries=()
-    original=$(LC_ALL=C sudo -V | awk '/^Value to override/ { sub(/^[^:]*: /, ""); print; exit }')
-    [[ -n "$original" ]] ||
-        { echo "Cannot determine sudo secure_path" >&2; return 1; }
-
-    # Preserve external paths while removing paths belonging to installed,
-    # marker-owned bin trees (including stale subdirectories).
-    IFS=: read -r -a path_entries <<< "$original"
-    for entry in "${path_entries[@]}"; do
-        [[ -n "$entry" ]] || continue
-        managed_root=''
-        if [[ "$entry" == "$root" || "$entry" == "$root/"* ]]; then
-            managed_root="$root"
-        elif [[ "$entry" == /usr/local/lib/*-bin* ]]; then
-            for dir in /usr/local/lib/*-bin; do
-                [[ -f "$dir/.dotfiles-bin-managed" ]] || continue
-                if [[ "$entry" == "$dir" || "$entry" == "$dir/"* ]]; then
-                    managed_root="$dir"
-                    break
-                fi
-            done
-        fi
-        [[ -n "$managed_root" ]] || clean_entries+=("$entry")
-    done
-    candidate=$(IFS=:; echo "${clean_entries[*]}")
-
-    # Rebuild paths from the incoming bin tree and all other installed trees.
-    local content_root
-    for managed_root in /usr/local/lib/*-bin "$root"; do
-        if [[ "$managed_root" == "$root" ]]; then
-            content_root="$src"
-        else
-            [[ -f "$managed_root/.dotfiles-bin-managed" ]] || continue
-            content_root="$managed_root"
-        fi
-        for dir in "$content_root" "$content_root"/*/; do
-            [[ -d "$dir" ]] || continue
-            dir="${dir%/}"
-            if [[ "$content_root" != "$managed_root" ]]; then
-                dir="$managed_root${dir#"$content_root"}"
-            fi
-            case ":$candidate:" in
-                *":$dir:"*) ;;
-                *) candidate="$candidate:$dir" ;;
-            esac
-        done
-    done
-
+  # Unprivileged dry-run cannot reliably read sudo's secure_path.
+  # Report the planned destinations without claiming sudoers validation.
+  if [[ $dry_run == true && $EUID != 0 ]]; then
     echo "Copy $src -> $root"
     echo "Update $profile and $sudoers"
-    echo "Previous sudo secure_path: $original"
-    echo "Proposed sudo secure_path: $candidate"
-    if [[ $dry_run == true ]]; then
-        echo "(dry-run; no changes)"
-        return 0
-    fi
+    echo "(dry-run; sudo secure_path not checked; use sudo ./install --system --dry-run)"
+    return 0
+  fi
 
-    mkdir -p "$parent"
-    stage=$(mktemp -d "$parent/.${name}-bin-stage.XXXXXXXX")
-    if ! cp -a "$src/." "$stage/"; then
-        rm -rf -- "$stage"
-        return 1
-    fi
-    chown -R root:root "$stage"
-    chmod -R go-w "$stage"
-    touch "$stage/.dotfiles-bin-managed"
-    chmod 644 "$stage/.dotfiles-bin-managed"
+  local original candidate dir entry managed_root stage backup='' stage_sudo
+  local -a path_entries=() clean_entries=()
+  original=$(LC_ALL=C sudo -V | awk '/^Value to override/ { sub(/^[^:]*: /, ""); print; exit }')
+  [[ -n "$original" ]] ||
+    {
+      echo "Cannot determine sudo secure_path" >&2
+      return 1
+    }
 
-    if [[ -d "$root" ]]; then
-        backup=$(mktemp -d "$parent/.${name}-bin-backup.XXXXXXXX")
-        rmdir "$backup"
-        mv "$root" "$backup"
+  # Preserve external paths while removing paths belonging to installed,
+  # marker-owned bin trees (including stale subdirectories).
+  IFS=: read -r -a path_entries <<< "$original"
+  for entry in "${path_entries[@]}"; do
+    [[ -n "$entry" ]] || continue
+    managed_root=''
+    if [[ "$entry" == "$root" || "$entry" == "$root/"* ]]; then
+      managed_root="$root"
+    elif [[ "$entry" == /usr/local/lib/*-bin* ]]; then
+      for dir in /usr/local/lib/*-bin; do
+        [[ -f "$dir/.dotfiles-bin-managed" ]] || continue
+        if [[ "$entry" == "$dir" || "$entry" == "$dir/"* ]]; then
+          managed_root="$dir"
+          break
+        fi
+      done
     fi
-    if ! mv "$stage" "$root"; then
-        [[ -z "$backup" ]] || mv "$backup" "$root"
-        return 1
-    fi
+    [[ -n "$managed_root" ]] || clean_entries+=("$entry")
+  done
+  candidate=$(
+    IFS=:
+    echo "${clean_entries[*]}"
+  )
 
-    cat > "$profile" <<'PROFILE'
+  # Rebuild paths from the incoming bin tree and all other installed trees.
+  local content_root
+  for managed_root in /usr/local/lib/*-bin "$root"; do
+    if [[ "$managed_root" == "$root" ]]; then
+      content_root="$src"
+    else
+      [[ -f "$managed_root/.dotfiles-bin-managed" ]] || continue
+      content_root="$managed_root"
+    fi
+    for dir in "$content_root" "$content_root"/*/; do
+      [[ -d "$dir" ]] || continue
+      dir="${dir%/}"
+      if [[ "$content_root" != "$managed_root" ]]; then
+        dir="$managed_root${dir#"$content_root"}"
+      fi
+      case ":$candidate:" in
+      *":$dir:"*) ;;
+      *) candidate="$candidate:$dir" ;;
+      esac
+    done
+  done
+
+  echo "Copy $src -> $root"
+  echo "Update $profile and $sudoers"
+  echo "Previous sudo secure_path: $original"
+  echo "Proposed sudo secure_path: $candidate"
+  if [[ $dry_run == true ]]; then
+    echo "(dry-run; no changes)"
+    return 0
+  fi
+
+  mkdir -p "$parent"
+  stage=$(mktemp -d "$parent/.${name}-bin-stage.XXXXXXXX")
+  if ! cp -a "$src/." "$stage/"; then
+    rm -rf -- "$stage"
+    return 1
+  fi
+  chown -R root:root "$stage"
+  chmod -R go-w "$stage"
+  touch "$stage/.dotfiles-bin-managed"
+  chmod 644 "$stage/.dotfiles-bin-managed"
+
+  if [[ -d "$root" ]]; then
+    backup=$(mktemp -d "$parent/.${name}-bin-backup.XXXXXXXX")
+    rmdir "$backup"
+    mv "$root" "$backup"
+  fi
+  if ! mv "$stage" "$root"; then
+    [[ -z "$backup" ]] || mv "$backup" "$root"
+    return 1
+  fi
+
+  cat > "$profile" << 'PROFILE'
 # Managed by dotfiles install-dotfiles-bin.sh
 # Load all installed repository bin trees.
 for _repo_bin_root in /usr/local/lib/*-bin; do
@@ -166,111 +184,111 @@ done
 export PATH
 unset _repo_bin_root _repo_bin_dir
 PROFILE
-    chmod 644 "$profile"
+  chmod 644 "$profile"
 
-    stage_sudo=$(mktemp /etc/sudoers.d/.dotfiles-bin.XXXXXXXX)
-    printf '%s\nDefaults secure_path="%s"\n' "$marker" "$candidate" > "$stage_sudo"
-    chmod 440 "$stage_sudo"
-    if ! visudo -cf "$stage_sudo" >/dev/null; then
-        rm -f "$stage_sudo"
-        echo "sudoers validation failed" >&2
-        return 1
-    fi
-    mv -f "$stage_sudo" "$sudoers"
-    [[ -z "$backup" ]] || rm -rf "$backup"
-    echo "System commands installed."
+  stage_sudo=$(mktemp /etc/sudoers.d/.dotfiles-bin.XXXXXXXX)
+  printf '%s\nDefaults secure_path="%s"\n' "$marker" "$candidate" > "$stage_sudo"
+  chmod 440 "$stage_sudo"
+  if ! visudo -cf "$stage_sudo" > /dev/null; then
+    rm -f "$stage_sudo"
+    echo "sudoers validation failed" >&2
+    return 1
+  fi
+  mv -f "$stage_sudo" "$sudoers"
+  [[ -z "$backup" ]] || rm -rf "$backup"
+  echo "System commands installed."
 }
 
 if [[ ${1:-} == --system ]]; then
-    shift
-    install_system "$@"
-    exit
+  shift
+  install_system "$@"
+  exit
 fi
 
-if (( $# > 1 )) || [[ $# == 1 && $1 != --dry-run ]]; then
-    echo "Usage: ./install [--dry-run]" >&2
-    exit 2
+if (($# > 1)) || [[ $# == 1 && $1 != --dry-run ]]; then
+  echo "Usage: ./install [--dry-run]" >&2
+  exit 2
 fi
 DRY_RUN=false
 [[ ${1:-} == --dry-run ]] && DRY_RUN=true
 
 link_file() {
-    local src="$1" dst="$2" current='' resolved=''
-    [[ -e "$src" || -L "$src" ]] || return 0
-    if [[ -L "$dst" ]]; then
-        current=$(readlink "$dst")
-        resolved=$(readlink -f "$dst" 2>/dev/null || true)
-        if [[ "$current" == "$src" || ( -n "$resolved" && "$resolved" == "$(readlink -f "$src" 2>/dev/null)" ) ]]; then
-            echo "SKIP: $dst"
-            return
-        fi
-        if [[ -e "$dst" && "$current" != "$DOTPATH/"* && "$resolved" != "$DOTPATH/"* ]]; then
-            echo "CONFLICT: $dst" >&2
-            return
-        fi
-        echo "RELINK: $dst -> $src"
-        if [[ "$DRY_RUN" == false ]]; then
-            mkdir -p "$(dirname "$dst")"
-            ln -sfn "$src" "$dst"
-        fi
-        return
+  local src="$1" dst="$2" current='' resolved=''
+  [[ -e "$src" || -L "$src" ]] || return 0
+  if [[ -L "$dst" ]]; then
+    current=$(readlink "$dst")
+    resolved=$(readlink -f "$dst" 2> /dev/null || true)
+    if [[ "$current" == "$src" || (-n "$resolved" && "$resolved" == "$(readlink -f "$src" 2> /dev/null)") ]]; then
+      echo "SKIP: $dst"
+      return
     fi
-    if [[ -e "$dst" ]]; then
-        # Fresh accounts already have a default .bashrc. Preserve shell rc files
-        # before linking ours, as we do for existing VS Code user settings.
-        case "$dst" in
-            "$HOME/.bashrc"|"$HOME/.zshrc")
-                if [[ -f "$dst" ]]; then
-                    local backup="$dst.backup" backup_num=1
-                    while [[ -e "$backup" || -L "$backup" ]]; do
-                        backup="$dst.backup.$backup_num"
-                        backup_num=$((backup_num + 1))
-                    done
-                    echo "Backup: $dst -> $backup"
-                    if [[ "$DRY_RUN" == false ]]; then
-                        mv -- "$dst" "$backup"
-                    fi
-                else
-                    echo "CONFLICT: $dst" >&2
-                    return
-                fi
-                ;;
-            *)
-                echo "CONFLICT: $dst" >&2
-                return
-                ;;
-        esac
+    if [[ -e "$dst" && "$current" != "$DOTPATH/"* && "$resolved" != "$DOTPATH/"* ]]; then
+      echo "CONFLICT: $dst" >&2
+      return
     fi
-    echo "LINK: $dst -> $src"
+    echo "RELINK: $dst -> $src"
     if [[ "$DRY_RUN" == false ]]; then
-        mkdir -p "$(dirname "$dst")"
-        ln -s "$src" "$dst"
+      mkdir -p "$(dirname "$dst")"
+      ln -sfn "$src" "$dst"
     fi
+    return
+  fi
+  if [[ -e "$dst" ]]; then
+    # Fresh accounts already have a default .bashrc. Preserve shell rc files
+    # before linking ours, as we do for existing VS Code user settings.
+    case "$dst" in
+    "$HOME/.bashrc" | "$HOME/.zshrc")
+      if [[ -f "$dst" ]]; then
+        local backup="$dst.backup" backup_num=1
+        while [[ -e "$backup" || -L "$backup" ]]; do
+          backup="$dst.backup.$backup_num"
+          backup_num=$((backup_num + 1))
+        done
+        echo "Backup: $dst -> $backup"
+        if [[ "$DRY_RUN" == false ]]; then
+          mv -- "$dst" "$backup"
+        fi
+      else
+        echo "CONFLICT: $dst" >&2
+        return
+      fi
+      ;;
+    *)
+      echo "CONFLICT: $dst" >&2
+      return
+      ;;
+    esac
+  fi
+  echo "LINK: $dst -> $src"
+  if [[ "$DRY_RUN" == false ]]; then
+    mkdir -p "$(dirname "$dst")"
+    ln -s "$src" "$dst"
+  fi
 }
 for src in "$DOTPATH"/home/.[!.]* "$DOTPATH"/home/..?*; do
-    [[ -e "$src" || -L "$src" ]] || continue
-    [[ "${src##*/}" == .config ]] && continue
-    # A symlinked installer denotes a child repository; its shell rc files
-    # extend the parent's startup files instead of replacing them.
-    if [[ -L "$DOTPATH/install" ]]; then
-        case "${src##*/}" in
-            .bashrc|.zshrc) continue ;;
-        esac
-    fi
-    link_file "$src" "$HOME/${src##*/}"
+  [[ -e "$src" || -L "$src" ]] || continue
+  [[ "${src##*/}" == .config ]] && continue
+  # A symlinked installer denotes a child repository; its shell rc files
+  # extend the parent's startup files instead of replacing them.
+  if [[ -L "$DOTPATH/install" ]]; then
+    case "${src##*/}" in
+    .bashrc | .zshrc) continue ;;
+    esac
+  fi
+  link_file "$src" "$HOME/${src##*/}"
 done
 if [[ -d "$DOTPATH/home/.config" ]]; then
-    # Only install Git-tracked configuration files, never generated caches.
-    while IFS= read -r -d '' relative; do
-        src="$DOTPATH/$relative"
-        [[ -f "$src" || -L "$src" ]] || continue
-        relative="${relative#home/.config/}"
-        # VS Code User settings are placed by install-extra on each OS.
-        [[ "$relative" == vscode/* && -f "$DOTPATH/install-extra" ]] && continue
-        link_file "$src" "$HOME/.config/$relative"
-    done < <(git -C "$DOTPATH" ls-files -z --cached -- home/.config)
+  # Only install Git-tracked configuration files, never generated caches.
+  while IFS= read -r -d '' relative; do
+    src="$DOTPATH/$relative"
+    [[ -f "$src" || -L "$src" ]] || continue
+    relative="${relative#home/.config/}"
+    # VS Code User settings are placed by install-extra on each OS.
+    [[ "$relative" == vscode/* && -f "$DOTPATH/install-extra" ]] && continue
+    link_file "$src" "$HOME/.config/$relative"
+  done < <(git -C "$DOTPATH" ls-files -z --cached -- home/.config)
 fi
 if [[ -f "$DOTPATH/install-extra" ]]; then
-    source "$DOTPATH/install-extra"
+  source "$DOTPATH/install-extra"
 fi
 echo "Installation complete."

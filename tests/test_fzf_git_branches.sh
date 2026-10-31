@@ -19,7 +19,7 @@ git -C "$TMP/repo" branch local-only
 git -C "$TMP/repo" branch longest-branch-name
 git -C "$TMP/repo" branch remote-only
 git -C "$TMP/repo" push -q origin both remote-only
-git -C "$TMP/repo" branch -D remote-only >/dev/null
+git -C "$TMP/repo" branch -D remote-only > /dev/null
 git -C "$TMP/repo" fetch -q origin
 git -C "$TMP/repo" worktree add -q "$TMP/linked" both
 

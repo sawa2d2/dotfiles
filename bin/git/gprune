@@ -12,21 +12,30 @@ quiet=false
 worktrees=false
 for arg in "$@"; do
   case $arg in
-    -q|--quiet) quiet=true ;;
-    -w|--worktrees) worktrees=true ;;
-    -h|--help) usage; exit 0 ;;
-    *) usage; exit 2 ;;
+  -q | --quiet) quiet=true ;;
+  -w | --worktrees) worktrees=true ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  *)
+    usage
+    exit 2
+    ;;
   esac
 done
 
-git rev-parse --is-inside-work-tree >/dev/null
+git rev-parse --is-inside-work-tree > /dev/null
 # Quiet mode runs automatically after fetch/pull, so skip unsupported repositories.
 if $quiet && ! git show-ref --verify --quiet refs/remotes/origin/main; then
   exit 0
 fi
 fetch_opts=(--prune)
 $quiet && fetch_opts+=(--quiet)
-git fetch "${fetch_opts[@]}" origin || { echo 'Failed to refresh origin; no branches deleted.' >&2; exit 1; }
+git fetch "${fetch_opts[@]}" origin || {
+  echo 'Failed to refresh origin; no branches deleted.' >&2
+  exit 1
+}
 git show-ref --verify --quiet refs/remotes/origin/main || {
   echo 'origin/main not found; no branches deleted.' >&2
   exit 1
@@ -42,7 +51,7 @@ current=$(git rev-parse --show-toplevel)
 deleted=0
 while IFS= read -r branch; do
   case $branch in
-    main|master|develop|development) continue ;;
+  main | master | develop | development) continue ;;
   esac
   worktree=$(printf '%s\n' "$checked_out" | awk -F '\t' -v b="$branch" '$1 == b {print $2; exit}')
   if [[ -n $worktree ]]; then
@@ -89,7 +98,7 @@ while IFS= read -r branch; do
     reason="$reason, worktree $worktree"
   fi
   printf 'DELETE %-45s (%s)\n' "$branch" "$reason"
-  git branch -D -- "$branch" >/dev/null
+  git branch -D -- "$branch" > /dev/null
   deleted=$((deleted + 1))
 done < <(git for-each-ref --format='%(refname:short)' refs/heads)
 

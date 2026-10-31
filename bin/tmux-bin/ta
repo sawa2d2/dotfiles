@@ -9,13 +9,13 @@ fi
 if (($# == 1)); then
   session=$1
 else
-  if ! command -v fzf >/dev/null 2>&1; then
+  if ! command -v fzf > /dev/null 2>&1; then
     echo 'ta: fzf is required for interactive session selection' >&2
     exit 1
   fi
 
   # Use a fixed delimiter so names with spaces remain valid.
-  listing=$(tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_attached}' | \
+  listing=$(tmux list-sessions -F '#{session_name}|#{session_windows}|#{session_attached}' |
     awk -F '|' 'BEGIN { OFS="\t" } { print $1, $2 " windows", ($3 == 0 ? "detached" : "attached") }')
   if [[ -z $listing ]]; then
     echo 'ta: no sessions available' >&2

@@ -17,8 +17,8 @@ fi
 
 variant=$1
 case "$variant" in
-  teal|violet|orange|blue|red|green|default) ;;
-  *) usage ;;
+teal | violet | orange | blue | red | green | default) ;;
+*) usage ;;
 esac
 
 if [[ -z $target && -z ${TMUX:-} ]]; then

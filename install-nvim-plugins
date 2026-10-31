@@ -5,10 +5,13 @@ set -euo pipefail
 # Re-running is safe: existing plugin directories and symlinks are preserved.
 plugin_dir="${HOME:?}/.local/share/nvim/site/pack/dotfiles/start"
 
-command -v git >/dev/null 2>&1 || { echo 'git is required' >&2; exit 1; }
+command -v git > /dev/null 2>&1 || {
+  echo 'git is required' >&2
+  exit 1
+}
 
-if ! command -v rg >/dev/null 2>&1; then
-  if [[ $(uname -s) == Darwin ]] && command -v brew >/dev/null 2>&1; then
+if ! command -v rg > /dev/null 2>&1; then
+  if [[ $(uname -s) == Darwin ]] && command -v brew > /dev/null 2>&1; then
     brew install ripgrep
   else
     echo 'WARNING: ripgrep (rg) is missing; Telescope file search may not work.' >&2

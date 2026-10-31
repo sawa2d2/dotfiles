@@ -1,7 +1,10 @@
 .PHONY: format format-check lint check
 
+# private.d is a separate repository with its own owner; never touch it here.
+EXCLUDE := private.d
 # Discover shell scripts by shebang/extension; include rc files without either.
-SHELL_FILES := $(sort $(shell shfmt -f .) $(shell find home -type f \
+SHELL_FILES := $(sort $(filter-out $(EXCLUDE)/% ./$(EXCLUDE)/%,$(shell shfmt -f .)) \
+	$(shell find home -type f \
 	\( -name '.bashrc' -o -name '.bash_aliases' -o -name '.zshrc' -o -name '*.zsh' \)))
 # shfmt and ShellCheck do not support Zsh-specific syntax in shared/Zsh modules.
 ZSH_FILES := $(filter %.zsh %.zshrc,$(SHELL_FILES))
@@ -13,13 +16,13 @@ PYTHON_SCRIPTS := $(shell find bin -type f -exec awk 'FNR == 1 && /^#!.*python/ 
 
 format:
 	shfmt -w $(BASH_FILES)
-	ruff check --fix . $(PYTHON_SCRIPTS)
-	ruff format . $(PYTHON_SCRIPTS)
+	ruff check --fix --extend-exclude $(EXCLUDE) . $(PYTHON_SCRIPTS)
+	ruff format --extend-exclude $(EXCLUDE) . $(PYTHON_SCRIPTS)
 
 format-check:
 	shfmt -d $(BASH_FILES)
-	ruff check . $(PYTHON_SCRIPTS)
-	ruff format --check . $(PYTHON_SCRIPTS)
+	ruff check --extend-exclude $(EXCLUDE) . $(PYTHON_SCRIPTS)
+	ruff format --check --extend-exclude $(EXCLUDE) . $(PYTHON_SCRIPTS)
 
 lint:
 	shellcheck -s bash $(BASH_FILES)

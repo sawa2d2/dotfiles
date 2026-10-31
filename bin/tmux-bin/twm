@@ -41,7 +41,7 @@ tmux select-window -t "$window"
 # Compact indices in both sessions. The source session may disappear when
 # moving its last window, so renumber it only while it still exists.
 tmux move-window -r -t "$destination"
-if tmux has-session -t "$source_session" 2>/dev/null; then
+if tmux has-session -t "$source_session" 2> /dev/null; then
   tmux move-window -r -t "$source_session"
 fi
 

@@ -11,34 +11,34 @@ COLOR_BORDER_ACTIVE='#ffffff'
 
 # Accent: prominent UI detail; Selected: softer, readable selection background.
 case "$THEME_VARIANT" in
-    teal)
-        COLOR_ACCENT='#1bafb5'
-        COLOR_SELECTED='#79bfc0'
-        ;;
-    violet)
-        COLOR_ACCENT='#9180d8'
-        COLOR_SELECTED='#b1a5e5'
-        ;;
-    orange)
-        COLOR_ACCENT='#d98d50'
-        COLOR_SELECTED='#e9b888'
-        ;;
-    blue)
-        COLOR_ACCENT='#1192e8'
-        COLOR_SELECTED='#75b8ed'
-        ;;
-    red)
-        COLOR_ACCENT='#da4e58'
-        COLOR_SELECTED='#ed9298'
-        ;;
-    green)
-        COLOR_ACCENT='#24a86a'
-        COLOR_SELECTED='#82cfaa'
-        ;;
-    *)
-        printf 'Unknown theme variant: %s\n' "$THEME_VARIANT" >&2
-        return 1 2>/dev/null || exit 1
-        ;;
+teal)
+  COLOR_ACCENT='#1bafb5'
+  COLOR_SELECTED='#79bfc0'
+  ;;
+violet)
+  COLOR_ACCENT='#9180d8'
+  COLOR_SELECTED='#b1a5e5'
+  ;;
+orange)
+  COLOR_ACCENT='#d98d50'
+  COLOR_SELECTED='#e9b888'
+  ;;
+blue)
+  COLOR_ACCENT='#1192e8'
+  COLOR_SELECTED='#75b8ed'
+  ;;
+red)
+  COLOR_ACCENT='#da4e58'
+  COLOR_SELECTED='#ed9298'
+  ;;
+green)
+  COLOR_ACCENT='#24a86a'
+  COLOR_SELECTED='#82cfaa'
+  ;;
+*)
+  printf 'Unknown theme variant: %s\n' "$THEME_VARIANT" >&2
+  return 1 2> /dev/null || exit 1
+  ;;
 esac
 
 # Match the tmux status bar background to the active theme.
