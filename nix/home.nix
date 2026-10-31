@@ -14,6 +14,7 @@
     ripgrep
     jq
     git
+    git-lfs
     gh
     tree
     shellcheck
