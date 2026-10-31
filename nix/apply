@@ -3,6 +3,16 @@ set -euo pipefail
 
 nix_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
+dry_run=false
+case ${1:-} in
+'') ;;
+--dry-run) dry_run=true ;;
+*)
+  echo "Usage: nix/apply [--dry-run]" >&2
+  exit 2
+  ;;
+esac
+
 if ! command -v nix > /dev/null 2>&1; then
   echo "Error: Nix is not installed or not in PATH." >&2
   exit 1
@@ -35,4 +45,8 @@ esac
 
 generation=$(nix build --impure --no-link --print-out-paths \
   "$nix_dir#homeConfigurations.$configuration.activationPackage")
+if $dry_run; then
+  echo "Built $generation (dry run; not activated)"
+  exit 0
+fi
 exec "$generation/activate"

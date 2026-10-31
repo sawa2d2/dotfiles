@@ -205,12 +205,21 @@ if [[ ${1:-} == --system ]]; then
   exit
 fi
 
-if (($# > 1)) || [[ $# == 1 && $1 != --dry-run ]]; then
-  echo "Usage: ./install [--dry-run]" >&2
-  exit 2
-fi
 DRY_RUN=false
-[[ ${1:-} == --dry-run ]] && DRY_RUN=true
+# Skip Nix even where it is installed.
+# shellcheck disable=SC2034 # read by install-extra
+NO_NIX=false
+# shellcheck disable=SC2034 # read by install-extra
+for arg in "$@"; do
+  case $arg in
+  --dry-run) DRY_RUN=true ;;
+  --no-nix) NO_NIX=true ;;
+  *)
+    echo "Usage: ./install [--dry-run] [--no-nix]" >&2
+    exit 2
+    ;;
+  esac
+done
 
 link_file() {
   local src="$1" dst="$2" current='' resolved=''

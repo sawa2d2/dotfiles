@@ -86,11 +86,20 @@ nix --version
 
 Reference: [Nix installation guide](https://nix.dev/install-nix).
 
-### Vim and Neovim plugins
+### Packages and editor plugins
 
-With Nix, `nix/home.nix` installs them (`nix/apply`). Without Nix, `./install`
-runs `install-nvim-plugins` and `install-vim-plugins`, which clone only the
-plugins that are missing. Keep both lists in sync when adding a plugin.
+`./install` is the single entry point; it never installs Nix itself.
+
+- With Nix installed, it runs `nix/apply`, so `nix/home.nix` provides the
+  packages and the Vim/Neovim plugins. `./install --dry-run` only builds the
+  configuration (`nix/apply --dry-run`). A failed apply is reported as a
+  warning and the rest of the installation continues.
+- Without Nix, it runs `install-nvim-plugins` and `install-vim-plugins`, which
+  clone only the plugins that are missing. Packages are not installed.
+- `./install --no-nix` skips both, e.g. on a machine with Nix where Home
+  Manager should not be used.
+
+Keep the plugin lists in `nix/home.nix` and the installers in sync.
 
 ## iTerm2 configuration (macOS)
 
