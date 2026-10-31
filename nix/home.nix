@@ -43,6 +43,8 @@
   home.file.".local/share/nvim/site/pack/dotfiles/start/gitsigns-nvim".source = pkgs.vimPlugins.gitsigns-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/vim-illuminate".source = pkgs.vimPlugins.vim-illuminate;
   home.file.".local/share/nvim/site/pack/dotfiles/start/conflict-marker-vim".source = pkgs.vimPlugins.conflict-marker-vim;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/persistence-nvim".source = pkgs.vimPlugins.persistence-nvim;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/ale".source = pkgs.vimPlugins.ale;
 
   # Zsh plugins, sourced from stable Home Manager-managed paths.
   home.file.".local/share/zsh/plugins/zsh-autosuggestions".source = "${pkgs.zsh-autosuggestions}/share/zsh-autosuggestions";
@@ -50,6 +52,7 @@
 
   # Vim's native package layout; do not replace the existing Vim configuration.
   home.file.".vim/pack/tpope/start/surround".source = pkgs.vimPlugins.vim-surround;
+  home.file.".vim/pack/dotfiles/start/ale".source = pkgs.vimPlugins.ale;
 
   # Share exactly the same Molokai theme between Vim and Neovim.
   home.file.".vim/colors/molokai.vim".source = "${molokai}/colors/molokai.vim";

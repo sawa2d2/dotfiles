@@ -86,13 +86,11 @@ nix --version
 
 Reference: [Nix installation guide](https://nix.dev/install-nix).
 
-### Neovim plugin installation (manual)
+### Vim and Neovim plugins
 
-If you are not using Nix, run:
-
-```bash
-bash ./install-nvim-plugins
-```
+With Nix, `nix/home.nix` installs them (`nix/apply`). Without Nix, `./install`
+runs `install-nvim-plugins` and `install-vim-plugins`, which clone only the
+plugins that are missing. Keep both lists in sync when adding a plugin.
 
 ## iTerm2 configuration (macOS)
 

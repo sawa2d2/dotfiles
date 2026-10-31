@@ -63,6 +63,21 @@ if [[ -x "$DOTPATH/theme/sync" ]]; then
     fi
 fi
 
+# Without Nix, plugins come from the installers. They only clone what is
+# missing, so plugins added later reach machines that already ran them. With
+# Nix, nix/home.nix owns the same plugin directories.
+if command -v nix >/dev/null 2>&1; then
+    echo "SKIP: Vim/Neovim plugins (managed by Nix; run nix/apply)"
+else
+    for editor in nvim vim; do
+        command -v "$editor" >/dev/null 2>&1 || continue
+        echo "Install $editor plugins"
+        [[ "$DRY_RUN" == true ]] && continue
+        bash "$DOTPATH/install-$editor-plugins" ||
+            echo "WARNING: $editor plugin installation failed; rerun ./install-$editor-plugins" >&2
+    done
+fi
+
 if [[ -f "$DOTPATH/private.d/install" ]]; then
     echo "Install private configuration"
     if [[ "$DRY_RUN" == true ]]; then
