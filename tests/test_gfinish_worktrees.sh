@@ -94,6 +94,7 @@ if "$gfinish" -y -m feat/d > "$tmp/out" 2>&1; then fail 'feat/d: conflict accept
 [[ $(git log -1 --format=%s main) == conflict && $(git worktree list | wc -l) == 1 ]] ||
   fail 'feat/d: conflict left state behind'
 [[ $(git branch --show-current) == feat/d && -z $(git status --porcelain) ]] || fail 'feat/d: checkout changed'
+grep -qx '  file' "$tmp/out" || fail 'feat/d: conflicted path not listed'
 
 # An aborted commit message (editor exits non-zero) also leaves no trace.
 git switch -q -c feat/e main
@@ -104,5 +105,32 @@ if GIT_EDITOR=false "$gfinish" <<< y > "$tmp/out" 2>&1; then fail 'feat/e: abort
 grep -q "Squash commit was not made" "$tmp/out" || fail 'feat/e: did not reach the commit'
 [[ $(git log -1 --format=%s main) == conflict && $(git worktree list | wc -l) == 1 ]] ||
   fail 'feat/e: aborted commit left state behind'
+
+# Nothing is checked out to squash: a required filter whose smudge fails
+# (e.g. Git LFS configured but not installed) does not get in the way.
+git switch -q main
+git reset -q --hard origin/main
+printf '*.bin filter=broken\n' > .gitattributes
+printf 'blob\n' > font.bin
+git -c filter.broken.clean=cat add .gitattributes font.bin
+git commit -qm 'add filtered file'
+git push -q origin main
+git config filter.broken.clean cat
+git config filter.broken.smudge false
+git config filter.broken.required true
+change feat/f
+finish feat/f
+finished feat/f 1
+
+# Without -m or -y the editor gets the default message; comments are dropped.
+cat > "$tmp/editor" << 'EDITOR'
+#!/bin/sh
+grep -q '^feat: g$' "$1" || exit 1
+printf 'edited subject\n# dropped\n' > "$1"
+EDITOR
+chmod +x "$tmp/editor"
+change feat/g
+GIT_EDITOR="$tmp/editor" "$gfinish" <<< $'y\ny' > "$tmp/out" 2>&1 || fail 'feat/g: gfinish failed'
+[[ $(git log -1 --format=%B main) == 'edited subject' ]] || fail 'feat/g: edited message'
 
 echo 'PASS: gfinish integrates wherever main is checked out'

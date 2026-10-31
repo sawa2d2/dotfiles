@@ -55,13 +55,22 @@ confirm() {
   [[ $answer == [yY] ]]
 }
 
-commit_squash() {
-  local worktree=$1
+# Write the squash commit message to $1, letting the user edit it unless one
+# was given or -y was passed. An empty message or a failed editor fails.
+write_squash_message() {
+  local file=$1 editor
   if $message_given || $assume_yes; then
-    git -C "$worktree" commit -m "$message"
-  else
-    git -C "$worktree" commit -e -m "$message"
+    printf '%s\n' "$message" > "$file"
+    return
   fi
+  printf '%s\n\n# Squash of %s into main. Lines starting with # are ignored;\n# an empty message aborts.\n' \
+    "$message" "$feature" > "$file"
+  # GIT_EDITOR may hold arguments (e.g. "code --wait"); let the shell split it.
+  editor=$(git var GIT_EDITOR)
+  eval "$editor \"\$file\"" || return
+  git stripspace --strip-comments < "$file" > "$file.clean"
+  mv -- "$file.clean" "$file"
+  [[ -s $file ]]
 }
 
 feature=$(git symbolic-ref --quiet --short HEAD) || {
@@ -152,8 +161,9 @@ if git diff --quiet main "$feature"; then
   exit 1
 fi
 
-# main may be checked out in any worktree, or in none. Squash in a temporary
-# detached worktree so no checkout changes until the commit succeeds.
+# main may be checked out in any worktree, or in none. The squash is built
+# from trees alone, so no checkout (or checkout filter such as Git LFS) runs
+# until main is advanced.
 if [[ -n $main_worktree && -n $(git -C "$main_worktree" status --porcelain) ]]; then
   echo "Main worktree has uncommitted changes: $main_worktree" >&2
   exit 1
@@ -168,22 +178,19 @@ git diff --stat main "$feature"
 confirm "Continue?" || exit 0
 
 old_main=$(git rev-parse main)
-temporary=$(mktemp -d)
-rmdir "$temporary"
-git worktree add -q --detach "$temporary" main
-# The temporary checkout holds nothing but the squash, so drop it on failure.
-if ! git -C "$temporary" merge --squash "$feature"; then
-  git worktree remove --force "$temporary"
-  echo "Squash of $feature into main failed; merge main into $feature first." >&2
+if ! merged=$(git merge-tree --write-tree --name-only "$old_main" "$feature"); then
+  echo "Squash of $feature into main conflicts; merge main into $feature first:" >&2
+  # After the tree ID: conflicted paths, a blank line, then merge messages.
+  sed -n '2,/^$/p' <<< "$merged" | sed '/^$/d; s/^/  /' >&2
   exit 1
 fi
-if ! commit_squash "$temporary"; then
-  git worktree remove --force "$temporary"
+message_file=$(mktemp)
+trap 'rm -f -- "$message_file"' EXIT
+if ! write_squash_message "$message_file"; then
   echo "Squash commit was not made; main is unchanged." >&2
   exit 1
 fi
-result=$(git -C "$temporary" rev-parse HEAD)
-git worktree remove "$temporary"
+result=$(git commit-tree "${merged%%$'\n'*}" -p "$old_main" -F "$message_file")
 
 # Advance main where it lives: fast-forward its worktree, or move the ref
 # (only if it still points where it did) when nothing has it checked out.
