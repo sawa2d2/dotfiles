@@ -88,3 +88,6 @@ terraform.rc
 # draw.io
 *.bkp
 *.dtmp
+
+# Agent handoff note (agent-config deploy/AGENTS.md)
+.agent-handoff.md
