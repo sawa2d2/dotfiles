@@ -91,3 +91,6 @@ terraform.rc
 
 # Agent handoff note (agent-config deploy/AGENTS.md)
 .agent-handoff.md
+
+# Agent progress file (agent-config autonomous-development skill)
+.agent-progress.md
