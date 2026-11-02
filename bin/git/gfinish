@@ -215,11 +215,52 @@ else
   # Do not force-remove: if the feature worktree acquired changes, preserve them.
   git worktree remove "$current"
 fi
+# A branch renamed with `git branch -m` after it was pushed still tracks its
+# old name on origin. Read the upstream and reflog before the branch (and
+# its config and reflog) is deleted.
+feature_sha=$(git rev-parse "refs/heads/$feature")
+upstream_remote=$(git config "branch.$feature.remote" || true)
+upstream_merge=$(git config "branch.$feature.merge" || true)
+old_name=
+if [[ $upstream_merge == refs/heads/* && ${upstream_merge#refs/heads/} != "$feature" ]] &&
+  git reflog show --format=%gs "refs/heads/$feature" |
+  grep -qF "Branch: renamed $upstream_merge to refs/heads/"; then
+  old_name=${upstream_merge#refs/heads/}
+fi
+# Other local branches that track the old name share it; leave it to them.
+old_name_trackers=
+if [[ -n $old_name ]]; then
+  old_name_trackers=$(git for-each-ref --format='%(refname:short)%09%(upstream)' refs/heads |
+    awk -F '\t' -v self="$feature" -v upstream="refs/remotes/$upstream_remote/$old_name" \
+      '$1 != self && $2 == upstream { print $1 }')
+fi
 git branch -D "$feature"
 
 if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
   if confirm "Delete remote branch origin/$feature?"; then
     git push origin --delete "$feature"
+  fi
+fi
+
+# Delete the old name only when nothing on it could be lost: it is on origin,
+# is not main, no other branch tracks it, and its tip is part of the feature.
+if [[ -n $old_name ]]; then
+  old_ref=$(git ls-remote --heads origin "refs/heads/$old_name" 2> /dev/null || true)
+  old_sha=${old_ref%%[[:space:]]*}
+  if [[ $upstream_remote != origin ]]; then
+    echo "Kept $upstream_remote/$old_name (old name of $feature): not on origin."
+  elif [[ -z $old_sha ]]; then
+    :
+  elif [[ $old_name == main ]]; then
+    echo "Kept origin/main (old name of $feature): it is main."
+  elif [[ -n $old_name_trackers ]]; then
+    echo "Kept origin/$old_name (old name of $feature): also tracked by ${old_name_trackers//$'\n'/, }."
+  elif ! git fetch -q origin "refs/heads/$old_name" ||
+    ! git merge-base --is-ancestor "$old_sha" "$feature_sha"; then
+    echo "Kept origin/$old_name (old name of $feature): it has commits not in $feature."
+  elif confirm "Delete origin/$old_name, the old name of $feature?"; then
+    # The lease refuses the delete if someone pushed to it since the check.
+    git push --force-with-lease="refs/heads/$old_name:$old_sha" origin --delete "$old_name"
   fi
 fi
 
