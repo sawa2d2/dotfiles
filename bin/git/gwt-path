@@ -164,6 +164,12 @@ else
   exit 1
 fi
 target="$HOME/worktrees/$owner/$repo/$local_branch"
+# git worktree add -b creates the branch before it finds the path taken
+# (e.g. by a worktree whose branch was renamed), leaving a stray branch.
+if [[ -e $target || -L $target ]]; then
+  echo "Destination already exists: $target" >&2
+  exit 1
+fi
 mkdir -p "$(dirname "$target")"
 if [[ $create_branch == 1 ]]; then
   git worktree add -b "$local_branch" "$target" main >&2
