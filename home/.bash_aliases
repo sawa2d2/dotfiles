@@ -1,6 +1,7 @@
 # Directory navigation
 alias ..='cd ..'
 alias ...='cd ../..'
+alias -- -='cd -'
 
 alias de='cd ~/Desktop'
 alias dl='cd ~/Downloads'
