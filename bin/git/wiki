@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
+# Clone the wiki of the current repository into .wiki at its top level.
+# GitHub (incl. Enterprise), GitLab and Gitea/Forgejo all serve a wiki as a
+# sibling repository named <repo>.wiki.git, so derive it from origin's URL.
+set -euo pipefail
 
-owner_repo=$(show-owner-and-repo)
-echo "$owner_repo"
-git clone "git@github.com:${owner_repo}.wiki.git" .wiki
+if (($# != 0)); then
+  echo 'Usage: wiki' >&2
+  exit 2
+fi
+
+top=$(git rev-parse --show-toplevel)
+origin_url=$(git remote get-url origin) || {
+  echo 'Origin remote is required.' >&2
+  exit 1
+}
+repo_url=${origin_url%/}
+repo_url=${repo_url%.git}
+wiki_url="$repo_url.wiki.git"
+echo "$wiki_url"
+git clone "$wiki_url" "$top/.wiki"
