@@ -105,13 +105,16 @@ fi
 
 # An agent (AGENT_APPROVAL_DIR is set by its launch wrapper) may finish only
 # after the user's prompt was exactly "approved", which leaves a marker for
-# this repository's top level. The marker is used up before merging.
+# the real top level of the session's worktree. The key is per worktree, not
+# per repository, so approving in one session cannot finish a branch that
+# another session works on. The marker is used up before merging.
 approval_marker=
 if [[ -n ${AGENT_APPROVAL_DIR:-} ]]; then
-  approval_marker=$AGENT_APPROVAL_DIR/$(printf %s "$(git rev-parse --show-toplevel | xargs realpath)" |
-    sha256sum | cut -c1-64)
+  approval_top=$(realpath -- "$(git rev-parse --show-toplevel)")
+  approval_marker=$AGENT_APPROVAL_DIR/$(printf %s "$approval_top" | sha256sum | cut -c1-64)
   if [[ -z $(find "$approval_marker" -maxdepth 0 -mmin -60 2> /dev/null) ]]; then
     echo "gfinish: an agent needs the user to say approved first" >&2
+    echo "gfinish: approval counts only in a session whose working directory is in $approval_top" >&2
     exit 1
   fi
 fi

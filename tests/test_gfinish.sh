@@ -229,7 +229,7 @@ GIT_EDITOR="$tmp/editor" "$gfinish" <<< $'y\ny' > "$tmp/out" 2>&1 || fail 'feat/
 [[ $(git log -1 --format=%B main) == 'edited subject' ]] || fail 'feat/g: edited message'
 
 # --- Agent approval: with AGENT_APPROVAL_DIR set, gfinish needs a fresh
-# marker for the repository top level and uses it up.
+# marker for the worktree's real top level and uses it up.
 setup approval
 approval_dir=$tmp/approval
 marker=$approval_dir/$(printf %s "$(realpath "$tmp/repo")" | sha256sum | cut -c1-64)
@@ -256,5 +256,26 @@ finished feat/h 1
 [[ ! -e $marker ]] || fail 'feat/h: marker not used up'
 change feat/i
 refused 'reused marker'
+grep -qxF "gfinish: approval counts only in a session whose working directory is in $(realpath "$tmp/repo")" "$tmp/out" ||
+  fail 'feat/i: expected top level not named'
+# A linked worktree (reached through a symlink, with a space in its path) has
+# its own key: approval in the primary checkout does not finish it.
+git switch -q main
+git worktree add -q -b feat/j "$tmp/linked wt" main
+ln -s "$tmp/linked wt" "$tmp/wt-link"
+cd "$tmp/wt-link"
+printf 'j\n' >> file
+git commit -qam feat/j
+git push -q origin feat/j
+touch "$marker"
+refused 'marker of the primary checkout'
+grep -qxF "gfinish: approval counts only in a session whose working directory is in $tmp/linked wt" "$tmp/out" ||
+  fail 'feat/j: linked worktree not named'
+linked_marker=$approval_dir/$(printf %s "$tmp/linked wt" | sha256sum | cut -c1-64)
+touch "$linked_marker"
+AGENT_APPROVAL_DIR=$approval_dir "$gfinish" -y -m feat/j > "$tmp/out" 2>&1 || fail 'feat/j: approved gfinish failed'
+cd "$tmp/repo"
+finished feat/j 1
+[[ ! -e $linked_marker && -e $marker ]] || fail 'feat/j: wrong marker used up'
 
 echo 'PASS: gfinish messages, renamed branches, worktrees, and agent approval'
