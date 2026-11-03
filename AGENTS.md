@@ -28,6 +28,13 @@
 - Report what was actually tested and what remains unverified.
 - Distinguish GitHub commits from changes installed or executed on the user's machine.
 
+## Tests
+
+- Keep one test file per command in `tests/`; extend it instead of adding a new file.
+- When removing a feature or changing behavior, delete or update its tests in the same commit.
+- Add a regression test only for behavior that could break silently, not for every fix.
+- Test through the command's interface (arguments, output, exit status), not its internals.
+
 ## Dotfiles-specific rules
 
 - Preserve the distinction between per-user and system-wide installation.
