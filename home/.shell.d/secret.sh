@@ -10,7 +10,12 @@ load-secret() {
         shift
     fi
     (( $# == 1 )) || { command load-secret ${force:+"$force"} "$@"; return; }
-    local value
-    value=$(command load-secret ${force:+"$force"} "$1") || return
+    local value rc=0
+    value=$(command load-secret ${force:+"$force"} "$1") || rc=$?
+    if (( rc != 0 )); then
+        printf 'load-secret: failed to load %s\n' "$1" >&2
+        return "$rc"
+    fi
     export "$1=$value"
+    printf 'load-secret: loaded %s\n' "$1" >&2
 }

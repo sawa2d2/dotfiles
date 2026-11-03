@@ -35,16 +35,18 @@ fail() {
 for sh in bash zsh; do
   command -v "$sh" > /dev/null || continue
   rm -rf "$TMP/run/secret-cache" "$OP_LOG"
-  load() { "$sh" -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN && printf "%s" "$GH_TOKEN"' _ "$ROOT" 2>&1; }
+  # stdout is only what the test prints; the function reports on stderr.
+  load() { "$sh" -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN && printf "%s" "$GH_TOKEN"' _ "$ROOT" 2> "$TMP/err"; }
   out=$(load) || fail "$sh: load-secret failed"
   [[ $out == 'value-of:op://Private/GitHub/token' ]] || fail "$sh: exported value"
+  [[ $(cat "$TMP/err") == 'load-secret: loaded GH_TOKEN' ]] || fail "$sh: success notice: $(cat "$TMP/err")"
   # The second call is served from the private cache without asking 1Password.
   out=$(load) || fail "$sh: cached load failed"
   [[ $out == 'value-of:op://Private/GitHub/token' && $(wc -l < "$OP_LOG") == 1 ]] || fail "$sh: cache"
   [[ -n $(find "$TMP/run/secret-cache" -maxdepth 0 -perm 700) ]] || fail "$sh: cache permissions"
   # -f asks 1Password again even within the cache lifetime and refreshes the cache.
   printf 'stale' > "$(find "$TMP/run/secret-cache" -name 'GH_TOKEN-*')"
-  out=$("$sh" -c 'source "$1/home/.shell.d/secret.sh" && load-secret -f GH_TOKEN && printf "%s" "$GH_TOKEN"' _ "$ROOT" 2>&1) ||
+  out=$("$sh" -c 'source "$1/home/.shell.d/secret.sh" && load-secret -f GH_TOKEN && printf "%s" "$GH_TOKEN"' _ "$ROOT" 2> "$TMP/err") ||
     fail "$sh: forced load failed"
   [[ $out == 'value-of:op://Private/GitHub/token' && $(grep -c '^read$' "$OP_LOG") == 2 ]] || fail "$sh: -f"
   out=$(load) && [[ $out == 'value-of:op://Private/GitHub/token' ]] || fail "$sh: -f did not refresh the cache"
@@ -58,6 +60,7 @@ fresh() {
 status=0
 out=$(OP_SIGNED_OUT=1 fresh) || status=$?
 ((status == 1)) && [[ $out == *'not signed in'*'eval "$(op signin)"'* ]] || fail 'sign-in hint'
+[[ $out == *'load-secret: failed to load GH_TOKEN' ]] || fail 'failure notice'
 status=0
 out=$(OP_BAD_REF=1 fresh) || status=$?
 ((status == 1)) && [[ $out == *'could not read secret'* && $out != *'op signin'* ]] || fail 'no hint for other failures'
@@ -72,4 +75,11 @@ status=0
 out=$(load-secret -f 2>&1) || status=$?
 ((status == 2)) || fail '-f without a name rejected'
 
-echo 'PASS: load-secret exports and caches secrets, -f bypasses the cache, and explains a missing sign-in'
+# Run directly on a terminal, the program refuses to show the value.
+if command -v script > /dev/null && script -qc true /dev/null > /dev/null 2>&1; then
+  out=$(script -qc 'load-secret GH_TOKEN; echo "status=$?"' /dev/null 2>&1) || true
+  [[ $out != *value-of:* && $out == *'not printing GH_TOKEN to a terminal'* && $out == *status=1* ]] ||
+    fail 'terminal output refused'
+fi
+
+echo 'PASS: load-secret exports and caches secrets, -f bypasses the cache, never prints to a terminal, and explains a missing sign-in'
