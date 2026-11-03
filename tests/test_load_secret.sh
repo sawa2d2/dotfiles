@@ -12,9 +12,16 @@ mkdir -p "$TMP/bin" "$TMP/home/.config/secret" "$TMP/run"
 cat > "$TMP/bin/op" << 'STUB'
 #!/bin/sh
 echo "$1" >> "$OP_LOG"
-# OP_SIGNED_OUT: every command fails as when no session exists.
+# OP_SIGNED_OUT: every command fails as when no session exists, until the
+# shell evaluates what signin prints for the password "pw" read from stdin.
 # OP_BAD_REF: only read fails, as for a wrong reference.
-[ -z "${OP_SIGNED_OUT:-}" ] || { echo '[ERROR] You are not currently signed in.' >&2; exit 1; }
+if [ "$1" = signin ]; then
+  read -r pw && [ "$pw" = pw ] || { echo '[ERROR] authentication failed' >&2; exit 1; }
+  echo 'export OP_SESSION_test=token'
+  exit 0
+fi
+[ -z "${OP_SIGNED_OUT:-}" ] || [ -n "${OP_SESSION_test:-}" ] ||
+  { echo '[ERROR] You are not currently signed in.' >&2; exit 1; }
 [ "$1" = whoami ] && exit 0
 [ -z "${OP_BAD_REF:-}" ] || { echo '[ERROR] could not read secret' >&2; exit 1; }
 [ "$1" = read ] && printf 'value-of:%s' "$2"
@@ -52,18 +59,32 @@ for sh in bash zsh; do
   out=$(load) && [[ $out == 'value-of:op://Private/GitHub/token' ]] || fail "$sh: -f did not refresh the cache"
 done
 
-# A failed read explains how to sign in, but only when signed out.
+# When signed out, the function signs in on the terminal (stdin) in the
+# current shell and retries; the session stays for later op calls.
 fresh() {
-  rm -rf "$TMP/run/secret-cache"
-  bash -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN' _ "$ROOT" 2>&1
+  rm -rf "$TMP/run/secret-cache" "$OP_LOG"
+  "${2:-bash}" -c 'source "$1/home/.shell.d/secret.sh" && load-secret GH_TOKEN && printf "%s|%s" "$GH_TOKEN" "$OP_SESSION_test"' _ "$ROOT" 2>&1
 }
+for sh in bash zsh; do
+  command -v "$sh" > /dev/null || continue
+  out=$(printf 'pw\n' | OP_SIGNED_OUT=1 fresh "$sh") || fail "$sh: sign-in and retry"
+  [[ $out == *'signing in'*'loaded GH_TOKEN'*'value-of:op://Private/GitHub/token|token' && $out != *'run: eval'* ]] ||
+    fail "$sh: sign-in output"
+done
 status=0
-out=$(OP_SIGNED_OUT=1 fresh) || status=$?
-((status == 1)) && [[ $out == *'not signed in'*'eval "$(op signin)"'* ]] || fail 'sign-in hint'
-[[ $out == *'load-secret: failed to load GH_TOKEN' ]] || fail 'failure notice'
+out=$(printf 'wrong\n' | OP_SIGNED_OUT=1 fresh) || status=$?
+((status == 3)) && [[ $out == *'sign-in failed'*'failed to load GH_TOKEN'* && $(grep -c '^read$' "$OP_LOG") == 1 ]] ||
+  fail 'failed sign-in reported without retry'
+# Run directly (e.g. from scripts), the program only explains how to sign in.
+status=0
+rm -f "$OP_LOG"
+out=$(OP_SIGNED_OUT=1 load-secret -f GH_TOKEN 2>&1 < /dev/null) || status=$?
+((status == 3)) && [[ $out == *'not signed in'*'eval "$(op signin)"'* && $(grep -c '^signin$' "$OP_LOG") == 0 ]] ||
+  fail 'sign-in hint'
 status=0
 out=$(OP_BAD_REF=1 fresh) || status=$?
-((status == 1)) && [[ $out == *'could not read secret'* && $out != *'op signin'* ]] || fail 'no hint for other failures'
+((status == 1)) && [[ $out == *'could not read secret'* && $out != *'op signin'* && $out != *'signing in'* ]] ||
+  fail 'no sign-in for other failures'
 
 # Listing and direct use of the program (e.g. from scripts) work without the function.
 out=$(load-secret) && [[ $out == GH_TOKEN ]] || fail 'list names'
@@ -82,4 +103,4 @@ if command -v script > /dev/null && script -qc true /dev/null > /dev/null 2>&1; 
     fail 'terminal output refused'
 fi
 
-echo 'PASS: load-secret exports and caches secrets, -f bypasses the cache, never prints to a terminal, and explains a missing sign-in'
+echo 'PASS: load-secret exports and caches secrets, -f bypasses the cache, never prints to a terminal, and signs in when signed out'

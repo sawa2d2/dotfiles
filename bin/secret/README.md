@@ -12,7 +12,10 @@ live outside the repository and map a name to a secret reference, one per line:
 `load-secret` prints the value; a thin shell function in
 `home/.shell.d/secret.sh` exports it, since only the shell itself can change
 its environment (scripts can use `$(load-secret NAME)`). Values are cached for
-30 minutes; `load-secret -f NAME` skips the cache and refreshes it. When 1Password is signed out it says to run `eval "$(op signin)"`.
+30 minutes; `load-secret -f NAME` skips the cache and refreshes it. When
+1Password is signed out, the function runs `eval "$(op signin)"` in the
+current shell and retries once; the program alone (exit status 3) only says to
+run it.
 
 ## op-ssh-askpass
 

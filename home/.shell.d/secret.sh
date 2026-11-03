@@ -10,8 +10,19 @@ load-secret() {
         shift
     fi
     (( $# == 1 )) || { command load-secret ${force:+"$force"} "$@"; return; }
-    local value rc=0
-    value=$(command load-secret ${force:+"$force"} "$1") || rc=$?
+    local value session rc=0
+    value=$(LOAD_SECRET_SIGNIN=shell command load-secret ${force:+"$force"} "$1") || rc=$?
+    # Status 3: signed out of 1Password. Sign in here, since only this shell
+    # can keep the session variable op signin prints, then retry once.
+    if (( rc == 3 )); then
+        printf 'load-secret: signing in to 1Password\n' >&2
+        if session=$(op signin) && eval "$session"; then
+            rc=0
+            value=$(LOAD_SECRET_SIGNIN=shell command load-secret ${force:+"$force"} "$1") || rc=$?
+        else
+            printf 'load-secret: 1Password sign-in failed\n' >&2
+        fi
+    fi
     if (( rc != 0 )); then
         printf 'load-secret: failed to load %s\n' "$1" >&2
         return "$rc"
