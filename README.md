@@ -73,9 +73,11 @@ save your files before quitting.
 Neovim switches the IME to an ASCII/off state when leaving Insert mode and
 restores the previous state on the next InsertEnter. This is implemented by
 `home/.config/nvim/plugin/ime-switch.lua` and only activates when a supported
-command is installed; `./install` does not install any of them:
+command is installed. `./install` installs none of them, except `macism` on
+macOS when it uses Nix:
 
-- macOS: install `macism` (`brew tap laishulu/homebrew && brew install macism`).
+- macOS: `./install` provides `macism` via Nix when Nix is used; otherwise
+  install it with `brew tap laishulu/homebrew && brew install macism`.
   The ASCII input source defaults to `com.apple.keylayout.ABC`; check the ID by
   running `macism` while using English input. If it differs, set
   `let g:dotfiles_ime_ascii_source = 'YOUR_INPUT_SOURCE_ID'` in your Neovim

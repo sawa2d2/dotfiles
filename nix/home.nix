@@ -30,6 +30,9 @@
     # cannot load the host GPU drivers and renders in software, which is
     # all ssh -X offers anyway.
     mpv
+  ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+    # Neovim's ime-switch.lua switches the input source with macism.
+    macism
   ];
 
   # Neovim plugins, installed in the native package discovery path.
