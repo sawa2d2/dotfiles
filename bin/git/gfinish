@@ -103,6 +103,19 @@ if [[ -n $(git status --porcelain) ]]; then
   exit 1
 fi
 
+# An agent (AGENT_APPROVAL_DIR is set by its launch wrapper) may finish only
+# after the user's prompt was exactly "approved", which leaves a marker for
+# this repository's top level. The marker is used up before merging.
+approval_marker=
+if [[ -n ${AGENT_APPROVAL_DIR:-} ]]; then
+  approval_marker=$AGENT_APPROVAL_DIR/$(printf %s "$(git rev-parse --show-toplevel | xargs realpath)" |
+    sha256sum | cut -c1-64)
+  if [[ -z $(find "$approval_marker" -maxdepth 0 -mmin -60 2> /dev/null) ]]; then
+    echo "gfinish: an agent needs the user to say approved first" >&2
+    exit 1
+  fi
+fi
+
 git fetch origin main
 # Auto-push only when the feature branch is strictly ahead of its remote.
 # Never force-push, and stop if the remote is ahead or has diverged.
@@ -177,6 +190,9 @@ fi
 git diff --stat main "$feature"
 confirm "Continue?" || exit 0
 
+if [[ -n $approval_marker ]]; then
+  rm -f -- "$approval_marker"
+fi
 old_main=$(git rev-parse main)
 if ! merged=$(git merge-tree --write-tree --name-only "$old_main" "$feature"); then
   echo "Squash of $feature into main conflicts; merge main into $feature first:" >&2

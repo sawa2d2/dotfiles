@@ -9,6 +9,9 @@ tmp_root=$(mktemp -d)
 trap 'rm -rf -- "$tmp_root"' EXIT
 export GIT_CONFIG_GLOBAL=/dev/null GIT_AUTHOR_NAME=T GIT_AUTHOR_EMAIL=t@example.invalid \
   GIT_COMMITTER_NAME=T GIT_COMMITTER_EMAIL=t@example.invalid
+# Agents run these tests with AGENT_APPROVAL_DIR set; only the approval
+# section below sets it.
+unset AGENT_APPROVAL_DIR
 
 fail() {
   printf 'FAIL: %s\n--- output ---\n%s\n' "$1" "$(cat "$tmp/out" 2> /dev/null)" >&2
@@ -225,4 +228,33 @@ change feat/g
 GIT_EDITOR="$tmp/editor" "$gfinish" <<< $'y\ny' > "$tmp/out" 2>&1 || fail 'feat/g: gfinish failed'
 [[ $(git log -1 --format=%B main) == 'edited subject' ]] || fail 'feat/g: edited message'
 
-echo 'PASS: gfinish messages, renamed branches, and worktrees'
+# --- Agent approval: with AGENT_APPROVAL_DIR set, gfinish needs a fresh
+# marker for the repository top level and uses it up.
+setup approval
+approval_dir=$tmp/approval
+marker=$approval_dir/$(printf %s "$(realpath "$tmp/repo")" | sha256sum | cut -c1-64)
+mkdir -p "$approval_dir"
+change feat/h
+# gfinish on the current branch is refused for reason $1 and changes nothing.
+refused() {
+  local branch before
+  branch=$(git branch --show-current)
+  before=$(git rev-parse main)
+  if AGENT_APPROVAL_DIR=$approval_dir "$gfinish" -y -m "$branch" > "$tmp/out" 2>&1; then fail "$branch: $1 accepted"; fi
+  grep -qx 'gfinish: an agent needs the user to say approved first' "$tmp/out" || fail "$branch: $1 message"
+  [[ $(git rev-parse main) == "$before" && $(git branch --show-current) == "$branch" ]] || fail "$branch: $1 changed state"
+}
+refused 'missing marker'
+touch -d '61 minutes ago' "$marker"
+refused 'stale marker'
+touch "$approval_dir/$(printf %s /elsewhere | sha256sum | cut -c1-64)"
+rm -- "$marker"
+refused 'marker of another repository'
+touch "$marker"
+AGENT_APPROVAL_DIR=$approval_dir "$gfinish" -y -m feat/h > "$tmp/out" 2>&1 || fail 'feat/h: approved gfinish failed'
+finished feat/h 1
+[[ ! -e $marker ]] || fail 'feat/h: marker not used up'
+change feat/i
+refused 'reused marker'
+
+echo 'PASS: gfinish messages, renamed branches, worktrees, and agent approval'
