@@ -42,6 +42,12 @@ for sh in bash zsh; do
   out=$(load) || fail "$sh: cached load failed"
   [[ $out == 'value-of:op://Private/GitHub/token' && $(wc -l < "$OP_LOG") == 1 ]] || fail "$sh: cache"
   [[ -n $(find "$TMP/run/secret-cache" -maxdepth 0 -perm 700) ]] || fail "$sh: cache permissions"
+  # -f asks 1Password again even within the cache lifetime and refreshes the cache.
+  printf 'stale' > "$(find "$TMP/run/secret-cache" -name 'GH_TOKEN-*')"
+  out=$("$sh" -c 'source "$1/home/.shell.d/secret.sh" && load-secret -f GH_TOKEN && printf "%s" "$GH_TOKEN"' _ "$ROOT" 2>&1) ||
+    fail "$sh: forced load failed"
+  [[ $out == 'value-of:op://Private/GitHub/token' && $(grep -c '^read$' "$OP_LOG") == 2 ]] || fail "$sh: -f"
+  out=$(load) && [[ $out == 'value-of:op://Private/GitHub/token' ]] || fail "$sh: -f did not refresh the cache"
 done
 
 # A failed read explains how to sign in, but only when signed out.
@@ -62,5 +68,8 @@ out=$(load-secret GH_TOKEN) && [[ $out == 'value-of:op://Private/GitHub/token' ]
 status=0
 out=$(bash -c 'source "$1/home/.shell.d/secret.sh" && load-secret "bad name"' _ "$ROOT" 2>&1) || status=$?
 ((status == 2)) || fail 'invalid name rejected'
+status=0
+out=$(load-secret -f 2>&1) || status=$?
+((status == 2)) || fail '-f without a name rejected'
 
-echo 'PASS: load-secret exports and caches secrets and explains a missing sign-in'
+echo 'PASS: load-secret exports and caches secrets, -f bypasses the cache, and explains a missing sign-in'
