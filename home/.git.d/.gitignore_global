@@ -82,9 +82,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Ignore dependency lock files
-.terraform.lock.hcl
-
 # draw.io
 *.bkp
 *.dtmp
