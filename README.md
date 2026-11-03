@@ -68,6 +68,32 @@ cannot override that root directory.
 Unsaved buffer contents and running terminal processes are **not** preserved;
 save your files before quitting.
 
+## Neovim Japanese input (optional)
+
+Neovim switches the IME to an ASCII/off state when leaving Insert mode and
+restores the previous state on the next InsertEnter. This is implemented by
+`home/.config/nvim/plugin/ime-switch.lua` and only activates when a supported
+command is installed; `./install` does not install any of them:
+
+- macOS: install `macism` (`brew tap laishulu/homebrew && brew install macism`).
+  The ASCII input source defaults to `com.apple.keylayout.ABC`; check the ID by
+  running `macism` while using English input. If it differs, set
+  `let g:dotfiles_ime_ascii_source = 'YOUR_INPUT_SOURCE_ID'` in your Neovim
+  configuration.
+- Linux (Fcitx5): ensure `fcitx5-remote` is installed and available in PATH.
+  The plugin saves whether Fcitx5 was active, turns it off on InsertLeave,
+  then reactivates it on InsertEnter.
+- Linux (IBus, used when `fcitx5-remote` is absent): the plugin switches the
+  engine with `ibus engine`. The ASCII engine defaults to `xkb:jp::jpn` (JIS
+  keyboard layout); on a US layout set
+  `let g:dotfiles_ime_ascii_source = 'xkb:us::eng'`. `ibus list-engine` shows
+  the available engine names.
+
+Without those commands, the plugin is inert. A terminal's IME can intercept
+uncommitted Japanese text before Neovim receives keystrokes, so finish or
+cancel an active conversion before leaving Insert mode. `Ctrl+C` is mapped to
+`Esc` in Insert mode, so it switches the IME as well.
+
 ## Installing dependencies
 
 ### Nix installation
