@@ -45,6 +45,25 @@ esac
 
 generation=$(nix build --impure --no-link --print-out-paths \
   "$nix_dir#homeConfigurations.$configuration.activationPackage")
+
+# install-{vim,nvim}-plugins clone plugins where Nix is not used (e.g.
+# ./install --no-nix). Home Manager refuses to replace such clones with its
+# own links, so move them out of pack/*/start (where Vim would still load
+# them) instead of deleting possible local edits.
+backup_dir="$HOME_MANAGER_HOME/.local/state/dotfiles/plugin-backup/$(date +%Y%m%d%H%M%S)"
+for plugin in "$HOME_MANAGER_HOME"/.local/share/nvim/site/pack/dotfiles/start/* \
+  "$HOME_MANAGER_HOME"/.vim/pack/dotfiles/start/*; do
+  relative=${plugin#"$HOME_MANAGER_HOME"/}
+  [[ ! -L "$plugin" && -d "$plugin/.git" && -e "$generation/home-files/$relative" ]] || continue
+  if $dry_run; then
+    echo "Would move plugin clone $plugin -> $backup_dir/$relative"
+  else
+    echo "Move plugin clone $plugin -> $backup_dir/$relative"
+    mkdir -p "$(dirname -- "$backup_dir/$relative")"
+    mv -- "$plugin" "$backup_dir/$relative"
+  fi
+done
+
 if $dry_run; then
   echo "Built $generation (dry run; not activated)"
   exit 0

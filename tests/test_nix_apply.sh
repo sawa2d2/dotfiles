@@ -38,6 +38,22 @@ grep -q '^nix build' "$LOG" || fail 'dry run did not build'
 out=$(PATH="$TMP/bin:$SYSTEM_PATH" bash "$ROOT/nix/apply" 2>&1) || fail 'apply failed'
 grep -q activated "$LOG" || fail 'apply did not activate'
 
+# A plugin cloned without Nix where Home Manager now links one is moved out of
+# pack/*/start; a clone Home Manager does not manage stays.
+export HOME_MANAGER_HOME="$TMP/home"
+start=.local/share/nvim/site/pack/dotfiles/start
+mkdir -p "$HOME_MANAGER_HOME/$start/ale/.git" "$HOME_MANAGER_HOME/$start/extra/.git" \
+  "$TMP/generation/home-files/$start/ale"
+out=$(PATH="$TMP/bin:$SYSTEM_PATH" bash "$ROOT/nix/apply" --dry-run 2>&1) || fail 'dry run with clone failed'
+[[ -d $HOME_MANAGER_HOME/$start/ale && $out == *'Would move'*"$start/ale"* ]] ||
+  fail 'dry run did not only report the clone'
+out=$(PATH="$TMP/bin:$SYSTEM_PATH" bash "$ROOT/nix/apply" 2>&1) || fail 'apply with clone failed'
+[[ ! -e $HOME_MANAGER_HOME/$start/ale && -d $HOME_MANAGER_HOME/$start/extra ]] ||
+  fail 'clone not moved, or unmanaged clone moved'
+compgen -G "$HOME_MANAGER_HOME/.local/state/dotfiles/plugin-backup/*/$start/ale/.git" > /dev/null ||
+  fail 'clone not kept in the backup directory'
+unset HOME_MANAGER_HOME
+
 status=0
 out=$(PATH="$TMP/bin:$SYSTEM_PATH" bash "$ROOT/nix/apply" --bogus 2>&1) || status=$?
 ((status == 2)) || fail 'unknown option accepted'
@@ -48,4 +64,4 @@ status=0
 out=$(PATH="$TMP/bin:$SYSTEM_PATH" bash "$ROOT/nix/apply" 2>&1) || status=$?
 ((status == 1)) && [[ $out == *'Nix is not installed'* ]] || fail 'missing nix'
 
-echo 'PASS: nix/apply activates, builds only with --dry-run, and needs Nix installed'
+echo 'PASS: nix/apply activates, builds only with --dry-run, moves managed plugin clones aside, and needs Nix installed'
