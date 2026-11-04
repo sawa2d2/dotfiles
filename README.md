@@ -37,6 +37,19 @@ The installer links files under `home/` into `$HOME`. If private settings requir
 
 A symlinked `install` marks a child repository: its `home/.bashrc` and `home/.zshrc` are not linked into `$HOME`. Source these from the parent shell configuration when needed. This applies to nested child repositories as well.
 
+## Worktree commands on PATH
+
+In interactive Bash and Zsh, while the current directory is inside a checkout
+or linked worktree of `sawa2d2/local-ai`, `sawa2d2/dotfiles` or
+`sawa2d2/agent-config`, that worktree's `bin/` comes first on PATH (so `ai`
+runs the worktree's `bin/ai`); it is removed again when leaving. Repositories
+are recognized by their `origin` remote; other repositories' `bin/` is never
+added. To trust more, set space-separated entries in `private.d`:
+
+```bash
+DOTFILES_WORKTREE_BIN_REPOS='github.com/sawa2d2/other-repo'
+```
+
 ## VS Code User Settings
 
 `./install` links `home/.config/vscode/settings.json` and `extensions.json` to the VS Code User directory:
