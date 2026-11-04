@@ -20,12 +20,14 @@ path_prepend() {
 configure_developer_path() {
     local -a dirs
     local dir i
-    # Keep developer scripts first, then Nix-managed tools, then other PATH entries.
+    # Keep developer scripts first, then Nix-managed tools, then per-user bins, then other PATH entries.
     dirs=("$DOTPATH/bin" "$DOTPATH/private.d/bin")
     for dir in "$DOTPATH"/bin/*/; do
         [[ -d "$dir" ]] && dirs+=("${dir%/}")
     done
     [[ -d "$HOME/.nix-profile/bin" ]] && dirs+=("$HOME/.nix-profile/bin")
+    # ~/.profile adds these only in login shells; non-login shells (e.g. tmux panes) need them too.
+    dirs+=("$HOME/.local/bin" "$HOME/bin")
     local offset=0
     [[ -n ${ZSH_VERSION:-} ]] && offset=1
     for (( i=${#dirs[@]}-1+offset; i>=offset; i-- )); do
