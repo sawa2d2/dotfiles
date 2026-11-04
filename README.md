@@ -44,7 +44,7 @@ or linked worktree of `sawa2d2/local-ai`, `sawa2d2/dotfiles` or
 `sawa2d2/agent-config`, that worktree's `bin/` comes first on PATH (so `ai`
 runs the worktree's `bin/ai`); it is removed again when leaving. Repositories
 are recognized by their `origin` remote; other repositories' `bin/` is never
-added. To trust more, set space-separated entries in `private.d`:
+added, nor is that of a worktree whose root or `bin/` is owned by another user. To trust more, set space-separated entries in `private.d`:
 
 ```bash
 DOTFILES_WORKTREE_BIN_REPOS='github.com/sawa2d2/other-repo'

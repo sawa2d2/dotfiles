@@ -1,7 +1,8 @@
 # While the shell is inside a checkout or linked worktree of a trusted repository,
 # put its bin/ first on PATH so it shadows the main checkout's copy (`ai restart`
 # instead of `./bin/ai restart`). Only allowlisted origins are trusted: an
-# arbitrary clone must not be able to inject commands.
+# arbitrary clone must not be able to inject commands. The root and bin/ must
+# also be our own, or another user's clone of a trusted repository could.
 [[ $- == *i* ]] || return 0
 
 # Extend with space-separated host/owner/repo entries in DOTFILES_WORKTREE_BIN_REPOS
@@ -37,7 +38,7 @@ _dotfiles_worktree_bin_update() {
             ;;
         esac
         case " $_dotfiles_worktree_bin_repos ${DOTFILES_WORKTREE_BIN_REPOS-} " in
-        *" $origin "*) [[ -n $origin ]] && bin=$root/bin ;;
+        *" $origin "*) [[ -n $origin && -O $root && -O $root/bin ]] && bin=$root/bin ;;
         esac
     fi
 
