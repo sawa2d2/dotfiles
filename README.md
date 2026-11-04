@@ -12,6 +12,24 @@ Clones into `~/dotfiles` (override with `DOTFILES_DIR`) and installs symlinks. E
 
 `./install` also installs nvm v0.40.8 if `~/.nvm` is absent. Existing nvm directories are left untouched; Node.js versions are not installed automatically. Bash and Zsh load nvm from the shared shell initialization. To install Node.js explicitly, run `nvm install --lts` in a new shell.
 
+## Optional Intel Turbo Boost setting (Linux)
+
+`etc/tempfiles.d/no-turbo.conf` configures systemd-tmpfiles to set
+`intel_pstate/no_turbo` to `1`. This is intended for an explicitly selected
+Linux PC, such as a Linux Mint 21.3 system with an Intel Core i9-13900K and
+`intel_pstate` active. It disables Turbo Boost when the tmpfiles rule is
+applied. `./install` does not install this system-wide setting.
+
+To opt in on the target PC, from this repository run:
+
+```bash
+sudo install -D -m 0644 etc/tempfiles.d/no-turbo.conf /etc/tmpfiles.d/no-turbo.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/no-turbo.conf
+```
+
+The second command applies the setting immediately. The installed rule applies
+again when systemd-tmpfiles processes the configuration at boot.
+
 ## private.d
 
 To manage private dotfiles separately, create a `private.d/` repository next to this repository's `home/` directory:
