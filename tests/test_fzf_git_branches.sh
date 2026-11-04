@@ -91,4 +91,78 @@ status=0
 err=$(gwt -b '' 2>&1) || status=$?
 [[ $status -eq 2 && $err == 'Usage: gwt -b <new-branch>' ]]
 
-echo 'PASS: deduplicated branch status, capped columns, ref selection and gwt -b usage'
+# Fetch must update candidates before selection, pruning deleted remote refs.
+git --git-dir="$TMP/origin.git" branch fetched-branch main
+git --git-dir="$TMP/origin.git" branch -D remote-only > /dev/null
+git --git-dir="$TMP/origin.git" tag unfetched-tag main
+git() {
+  if [[ ${1:-} == fetch ]]; then
+    printf '%s\n' "$*" >> "$TMP/fetch.log"
+    [[ ${GIT_TERMINAL_PROMPT:-} == 0 ]] || return 1
+    if [[ ${fail_fetch:-0} == 1 ]]; then
+      return 1
+    fi
+  fi
+  command git "$@"
+}
+timeout() {
+  [[ $1 == 10s ]]
+  shift
+  if [[ ${expire_fetch:-0} == 1 ]]; then
+    return 124
+  fi
+  "$@"
+}
+fzf() { grep 'fetched-branch' | head -n 1; }
+gbr
+[[ $(git branch --show-current) == fetched-branch ]]
+[[ $(cat "$TMP/fetch.log") == 'fetch --prune --no-tags --no-recurse-submodules' ]]
+[[ -z $(git for-each-ref --format='%(refname)' refs/remotes/origin/remote-only) ]]
+[[ -z $(git tag --list unfetched-tag) ]]
+
+# Failed and timed-out fetches still permit selecting existing local refs.
+fzf() { grep 'local-only' | head -n 1; }
+fail_fetch=1
+gbr 2> "$TMP/fetch.err"
+[[ $(git branch --show-current) == local-only ]]
+grep -Fq 'Warning: git fetch failed; continuing with existing refs.' "$TMP/fetch.err"
+fail_fetch=0
+expire_fetch=1
+fzf() { grep 'main' | head -n 1; }
+gbr 2> "$TMP/fetch.err"
+[[ $(git branch --show-current) == main ]]
+grep -Fq 'Warning: git fetch failed; continuing with existing refs.' "$TMP/fetch.err"
+expire_fetch=0
+
+# Without timeout, skip fetch and select an existing local branch immediately.
+: > "$TMP/fetch.log"
+mkdir "$TMP/no-timeout-bin"
+for tool in git awk sort cut grep head; do
+  ln -s "$(type -P "$tool")" "$TMP/no-timeout-bin/$tool"
+done
+(
+  unset -f timeout
+  export PATH="$TMP/no-timeout-bin"
+  fzf() { grep 'local-only' | head -n 1; }
+  gbr 2> "$TMP/no-timeout.err"
+  [[ $(git branch --show-current) == local-only ]]
+  [[ ! -s $TMP/fetch.log ]]
+  grep -Fq 'Skipping git fetch: timeout is not installed.' "$TMP/no-timeout.err"
+  grep -Fq 'brew install coreutils' "$TMP/no-timeout.err"
+)
+
+# Other gbr modes and gwt must never fetch.
+: > "$TMP/fetch.log"
+gbr local-only
+gbr -b created-branch
+gbr main
+gbr -d created-branch
+git branch delete-selected
+fzf() { grep '^delete-selected$'; }
+gbr -D
+gwt-path() { printf '%s\n' "$TMP/repo"; }
+fzf() { grep 'main' | head -n 1; }
+gwt
+[[ ! -s $TMP/fetch.log ]]
+
+echo 'PASS: branch candidates, gbr fetch/failure handling, unchanged explicit modes and gwt'

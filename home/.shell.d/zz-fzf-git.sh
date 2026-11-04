@@ -99,6 +99,14 @@ gbr() {
     return
   fi
   if (($# == 0)); then
+    # Skip network access when its wait cannot be bounded (e.g. stock macOS).
+    if command -v timeout >/dev/null 2>&1; then
+      if ! GIT_TERMINAL_PROMPT=0 timeout 10s git fetch --prune --no-tags --no-recurse-submodules; then
+        echo 'Warning: git fetch failed; continuing with existing refs.' >&2
+      fi
+    else
+      echo 'Skipping git fetch: timeout is not installed. Install GNU coreutils (macOS: brew install coreutils) to enable automatic fetching.' >&2
+    fi
     branch=$(_fzf_git_select_branch) || return
     [[ -n $branch ]] || return
   elif (($# == 1)) && [[ -n $1 && $1 != -* ]]; then
