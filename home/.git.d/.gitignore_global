@@ -86,8 +86,13 @@ terraform.rc
 *.bkp
 *.dtmp
 
+# Agent
+**/.bob/**/notes
+**/.bob/**/artifacts
+
 # Agent handoff note (agent-config deploy/AGENTS.md)
 .agent-handoff.md
 
 # Agent progress file (agent-config autonomous-development skill)
 .agent-progress.md
+

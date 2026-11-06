@@ -65,3 +65,4 @@ dotfiles_tmux_auto_start
 
 # Attach ble.sh after shell initialization
 type ble-attach &> /dev/null && ble-attach
+umask 077
