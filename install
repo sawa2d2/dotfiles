@@ -4,6 +4,10 @@ set -euo pipefail
 # Use the location of the invoked path, not the symlink target.
 DOTPATH=$(cd "$(dirname "$0")" && pwd -P)
 
+pull_current_branch() {
+  [[ ${1:-false} == true ]] || git -C "$DOTPATH" pull
+}
+
 install_system() {
   local dry_run=false
   if [[ ${1:-} == --dry-run && $# == 1 ]]; then
@@ -12,6 +16,7 @@ install_system() {
     echo "Usage: sudo ./install --system [--dry-run]" >&2
     return 2
   fi
+  pull_current_branch "$dry_run"
   # macOS already resolves dotfiles commands through its existing PATH.
   # Do not duplicate binaries or modify system configuration.
   if [[ $(uname -s) == Darwin ]]; then
@@ -220,6 +225,7 @@ for arg in "$@"; do
     ;;
   esac
 done
+pull_current_branch "$DRY_RUN"
 
 link_file() {
   local src="$1" dst="$2" current='' resolved=''
