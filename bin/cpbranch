@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+branch=$(git symbolic-ref --quiet --short HEAD)
+[[ -n "$branch" ]]
+printf '%s\n' "$branch" | pbcopy
