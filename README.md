@@ -194,3 +194,19 @@ In iTerm2, open **Settings → General → Settings**, enable **Load settings fr
 This is configured directly in iTerm2; `./install` is not involved.
 
 Note: VS Code uses `.vscode/extensions.json` for workspace extension recommendations. A file in the User directory is not equivalent and does not automatically install or recommend extensions globally.
+
+## Plain Git diffs
+
+Use a leading `-p` with `git df`, `git dfh`, `git dfn`, `git dfm`, or
+`git dfu` to disable the pager, color, and external diff tools, like
+`git diffplain`. For example, `git dfm -p` includes the branch's committed,
+staged, unstaged, and untracked changes since its merge base with `origin/main`;
+`git dfn -p 2` compares `HEAD~2` with `HEAD~1`.
+
+Without `-p`, display and comparison scopes stay the same. `dfm` pages its
+combined output once. `df` and `dfh` forward diff arguments and pathspecs;
+`dfn` accepts its optional commit number followed by diff arguments/pathspecs.
+Use `--` before pathspecs (for example, `git df -p -- -p` to inspect a file
+named `-p`). `dfm` and `dfu` accept only the optional leading `-p`.
+This convenience option does not change native `git diff -p`, which means
+patch output. The `diffplain` alias remains available.

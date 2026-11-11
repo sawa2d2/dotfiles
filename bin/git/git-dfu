@@ -2,15 +2,23 @@
 # Show unstaged tracked changes and untracked file contents without staging.
 set -o pipefail
 
+git_options=()
+diff_options=()
+if [[ ${1-} == -p ]]; then
+  shift
+  git_options=(--no-pager)
+  diff_options=(--no-color --no-ext-diff)
+fi
+
 if (($# != 0)); then
-  printf 'Usage: git dfu\n' >&2
+  printf 'Usage: git dfu [-p]\n' >&2
   exit 2
 fi
 
-git diff || exit $?
+git "${git_options[@]}" diff "${diff_options[@]}" || exit $?
 
 while IFS= read -r -d '' file; do
-  git diff --no-index -- /dev/null "$file"
+  git "${git_options[@]}" diff "${diff_options[@]}" --no-index -- /dev/null "$file"
   status=$?
   # --no-index returns 1 when files differ; anything higher is an error.
   if ((status > 1)); then

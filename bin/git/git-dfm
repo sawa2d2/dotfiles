@@ -4,17 +4,31 @@
 # merge base keeps newer origin/main commits out without merging them first.
 set -o pipefail
 
+git_options=()
+diff_options=()
+if [[ ${1-} == -p ]]; then
+  shift
+  git_options=(--no-pager)
+  diff_options=(--no-color --no-ext-diff)
+fi
+
 if (($# != 0)); then
-  printf 'Usage: git dfm\n' >&2
+  printf 'Usage: git dfm [-p]\n' >&2
   exit 2
+fi
+
+# Start one outer pager only after parsing -p. The guard also handles
+# pagers such as cat that Git optimizes away without redirecting stdout.
+if [[ -t 1 && ${#git_options[@]} == 0 && ${GIT_DFM_PAGED:-} != 1 ]]; then
+  GIT_DFM_PAGED=1 exec git --paginate -c pager.dfm=true dfm
 fi
 
 base=$(git merge-base origin/main HEAD) || exit $?
 
-git diff "$base" || exit $?
+git "${git_options[@]}" diff "${diff_options[@]}" "$base" || exit $?
 
 while IFS= read -r -d '' file; do
-  git diff --no-index -- /dev/null "$file"
+  git "${git_options[@]}" diff "${diff_options[@]}" --no-index -- /dev/null "$file"
   status=$?
   # --no-index returns 1 when files differ; anything higher is an error.
   if ((status > 1)); then

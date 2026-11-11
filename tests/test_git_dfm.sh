@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-export PATH="$ROOT/bin/git:$PATH" GIT_CONFIG_GLOBAL=/dev/null GIT_PAGER=cat
+export PATH="$ROOT/bin/git:$PATH" GIT_CONFIG_GLOBAL="$ROOT/home/.git.d/.gitconfig_shared" GIT_PAGER=cat
+
+source "$ROOT/tests/git_diff_helpers.bash"
 
 git init -q -b main "$TMP/repo"
 cd "$TMP/repo"
@@ -49,6 +51,9 @@ if grep -q -e upstream -e ignored.log <<< "$out"; then
   echo 'FAIL: includes origin/main-only or ignored changes' >&2
   exit 1
 fi
+
+[[ $(git dfm -p) == "$out" ]]
+check_display dfm
 
 status=0
 git dfm extra 2> /dev/null || status=$?
