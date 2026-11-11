@@ -45,6 +45,7 @@
   home.file.".local/share/nvim/site/pack/dotfiles/start/neo-tree-nvim".source = pkgs.vimPlugins.neo-tree-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/nui-nvim".source = pkgs.vimPlugins.nui-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/gitsigns-nvim".source = pkgs.vimPlugins.gitsigns-nvim;
+  home.file.".local/share/nvim/site/pack/dotfiles/start/diffview-nvim".source = pkgs.vimPlugins.diffview-nvim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/vim-illuminate".source = pkgs.vimPlugins.vim-illuminate;
   home.file.".local/share/nvim/site/pack/dotfiles/start/conflict-marker-vim".source = pkgs.vimPlugins.conflict-marker-vim;
   home.file.".local/share/nvim/site/pack/dotfiles/start/persistence-nvim".source = pkgs.vimPlugins.persistence-nvim;

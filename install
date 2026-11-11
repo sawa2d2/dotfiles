@@ -5,18 +5,30 @@ set -euo pipefail
 DOTPATH=$(cd "$(dirname "$0")" && pwd -P)
 
 pull_current_branch() {
-  [[ ${1:-false} == true ]] || git -C "$DOTPATH" pull
+  [[ ${1:-false} == true || ${2:-false} == true ]] && return 0
+  local branch upstream
+  branch=$(git -C "$DOTPATH" symbolic-ref --quiet HEAD)
+  upstream=$(git -C "$DOTPATH" for-each-ref --format='%(upstream)' "$branch")
+  if [[ -z "$upstream" ]]; then
+    echo "SKIP: git pull (current branch has no upstream)"
+    return 0
+  fi
+  git -C "$DOTPATH" pull
 }
 
 install_system() {
-  local dry_run=false
-  if [[ ${1:-} == --dry-run && $# == 1 ]]; then
-    dry_run=true
-  elif (($# != 0)); then
-    echo "Usage: sudo ./install --system [--dry-run]" >&2
-    return 2
-  fi
-  pull_current_branch "$dry_run"
+  local dry_run=false no_pull=false arg
+  for arg in "$@"; do
+    case $arg in
+    --dry-run) dry_run=true ;;
+    --no-pull) no_pull=true ;;
+    *)
+      echo "Usage: sudo ./install --system [--dry-run] [--no-pull]" >&2
+      return 2
+      ;;
+    esac
+  done
+  pull_current_branch "$dry_run" "$no_pull"
   # macOS already resolves dotfiles commands through its existing PATH.
   # Do not duplicate binaries or modify system configuration.
   if [[ $(uname -s) == Darwin ]]; then
@@ -211,6 +223,7 @@ if [[ ${1:-} == --system ]]; then
 fi
 
 DRY_RUN=false
+NO_PULL=false
 # Skip Nix even where it is installed.
 # shellcheck disable=SC2034 # read by install-extra
 NO_NIX=false
@@ -218,14 +231,15 @@ NO_NIX=false
 for arg in "$@"; do
   case $arg in
   --dry-run) DRY_RUN=true ;;
+  --no-pull) NO_PULL=true ;;
   --no-nix) NO_NIX=true ;;
   *)
-    echo "Usage: ./install [--dry-run] [--no-nix]" >&2
+    echo "Usage: ./install [--dry-run] [--no-nix] [--no-pull]" >&2
     exit 2
     ;;
   esac
 done
-pull_current_branch "$DRY_RUN"
+pull_current_branch "$DRY_RUN" "$NO_PULL"
 
 link_file() {
   local src="$1" dst="$2" current='' resolved=''

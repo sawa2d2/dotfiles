@@ -12,6 +12,13 @@ Clones into `~/dotfiles` (override with `DOTFILES_DIR`) and installs symlinks. E
 
 `./install` also installs nvm v0.40.8 if `~/.nvm` is absent. Existing nvm directories are left untouched; Node.js versions are not installed automatically. Bash and Zsh load nvm from the shared shell initialization. To install Node.js explicitly, run `nvm install --lts` in a new shell.
 
+`./install` first runs `git pull` when the current branch has an upstream and
+stops if pulling fails. On a branch without an upstream, it automatically skips
+pulling and installs the local checkout. Use `./install --no-pull` to skip
+pulling even when an upstream is configured. This also works with `--system`.
+`--dry-run` always skips pulling. Other installation steps may still download
+dependencies.
+
 ## Optional Intel Turbo Boost setting (Linux)
 
 `etc/tempfiles.d/no-turbo.conf` configures systemd-tmpfiles to set
@@ -98,6 +105,26 @@ even when launched from a subdirectory or with a file path. Session restoration
 cannot override that root directory.
 Unsaved buffer contents and running terminal processes are **not** preserved;
 save your files before quitting.
+
+## Neovim Git diff
+
+In Normal mode, `Space g d` opens Diffview's repository-wide changed-file list
+and diff in a separate tab. It compares the merge base of local `main` and
+`HEAD` against `HEAD` (`main...HEAD`), like a GitHub PR comparison; staged,
+unstaged, and untracked changes are excluded. Press the same keys in the
+Diffview tab to close it and return to the original editing window, preserving
+its tabs, splits, and unsaved buffers. Plain `gd` is unchanged.
+
+The repository is selected from the current file, or the working directory for
+an unnamed/special buffer. A missing local `main`, repository, or plugin is
+reported without fetching or choosing another base. For another comparison,
+use e.g. `:DiffviewOpen origin/main...HEAD` or `:DiffviewOpen develop...HEAD`;
+`:DiffviewClose` also closes the view. Bare `:DiffviewOpen` retains the plugin's
+working-tree comparison default.
+
+Install the plugin with `./install-nvim-plugins` without Nix, or apply the
+updated Home Manager configuration through the usual Nix installation workflow.
+Restart Neovim after installation.
 
 ## Neovim Japanese input (optional)
 
