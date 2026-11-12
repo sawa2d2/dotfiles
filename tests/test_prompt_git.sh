@@ -12,6 +12,7 @@ _PROMPT_GIT_CLEAN='<clean>'
 _PROMPT_GIT_DIRTY='<dirty>'
 _PROMPT_GIT_STAGED='<staged>'
 _PROMPT_GIT_MIXED='<mixed>'
+_PROMPT_GIT_GONE='<gone>'
 _PROMPT_RESET=''
 COLORS
 sed 's/^/typeset -g /' "$TMP/dot/theme/generated/bash-prompt.bash" > "$TMP/dot/theme/generated/zsh-prompt.zsh"
@@ -43,7 +44,7 @@ git_part() {
   # Keep only "<color>(branch ...)"; zsh wraps the color as %F{...}.
   prompt=${prompt//%B%F\{/}
   prompt=${prompt//\}/}
-  grep -oE '<(clean|dirty|staged|mixed)>\([^)]*\)' <<< "$prompt" || printf 'none'
+  grep -oE '<(clean|dirty|staged|mixed|gone)>\([^)]*\)' <<< "$prompt" || printf 'none'
 }
 
 expect() {
@@ -97,5 +98,20 @@ echo main > "$repo/file"
 git -C "$repo" commit -q -am main
 git -C "$repo" merge -q other > /dev/null 2>&1 || true
 expect "$repo" '<mixed>(main +2-1 * +)'
+
+# A locally missing upstream grays the segment but preserves change markers.
+git -C "$repo" merge --abort
+git -C "$repo" update-ref -d refs/remotes/origin/main
+expect "$repo" '<gone>(main)'
+echo change >> "$repo/file"
+expect "$repo" '<gone>(main *)'
+git -C "$repo" add file
+expect "$repo" '<gone>(main +)'
+echo again >> "$repo/file"
+expect "$repo" '<gone>(main * +)'
+
+# No configured upstream keeps the ordinary working tree color.
+git -C "$repo" branch --unset-upstream
+expect "$repo" '<mixed>(main * +)'
 
 echo 'PASS: prompt Git status matches expected markers in Bash and Zsh'

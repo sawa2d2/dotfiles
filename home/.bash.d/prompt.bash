@@ -61,7 +61,7 @@ _prompt_command() {
   #history -n
 
   local path branch="" dirty="" staged="" divergence="" ahead=0 behind=0
-  local status_output line
+  local status_output line upstream="" upstream_ab=""
   local git_color
 
   path="$(_prompt_path)"
@@ -74,7 +74,9 @@ _prompt_command() {
     while IFS= read -r line; do
       case $line in
       "# branch.head "*) branch=${line#"# branch.head "} ;;
+      "# branch.upstream "*) upstream=${line#"# branch.upstream "} ;;
       "# branch.ab "*)
+        upstream_ab=1
         read -r ahead behind <<< "${line#"# branch.ab "}"
         ahead=${ahead#+}
         behind=${behind#-}
@@ -94,7 +96,9 @@ _prompt_command() {
   fi
 
   # Choose Git color based on status.
-  if [[ -n "$dirty" && -n "$staged" ]]; then
+  if [[ -n "$upstream" && -z "$upstream_ab" ]]; then
+    git_color="$_PROMPT_GIT_GONE"
+  elif [[ -n "$dirty" && -n "$staged" ]]; then
     git_color="$_PROMPT_GIT_MIXED"
   elif [[ -n "$dirty" ]]; then
     git_color="$_PROMPT_GIT_DIRTY"
