@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # gwt-path finds a worktree by its branch even after the branch is renamed
-# in place, and refuses to reuse the old directory without leaving a branch.
+# in place, refuses to reuse the old directory without leaving a branch, and
+# -d keeps untracked files while removing the worktree and its branch.
 set -euo pipefail
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -31,4 +32,28 @@ grep -q 'Destination already exists' "$tmp/out" || fail 'message'
 [[ -z $(git branch --list feat/a) ]] || fail 'stray branch feat/a left'
 [[ $(git worktree list | wc -l) == 2 ]] || fail 'worktree list changed'
 
-echo 'PASS: gwt-path follows renamed branches and refuses taken directories cleanly'
+# -d keeps untracked and ignored files, removes tracked ones, unregisters
+# the worktree and deletes the branch.
+mkdir -p src
+echo tracked > src/tracked.txt
+echo '*.log' > .gitignore
+git add -A && git commit -q -m files
+wt=$("$gwt_path" -b feat/c 2> /dev/null) || fail 'create feat/c'
+echo note > "$wt/src/untracked.txt"
+echo log > "$wt/debug.log"
+admin=$(git -C "$wt" rev-parse --absolute-git-dir)
+out=$("$gwt_path" -d feat/c 2> "$tmp/out") || fail 'delete feat/c'
+[[ $out == "$PWD" ]] || fail "unexpected cd target: $out"
+grep -q "Kept untracked files in: $wt" "$tmp/out" || fail 'kept message'
+[[ -f $wt/src/untracked.txt && -f $wt/debug.log ]] || fail 'untracked or ignored file removed'
+[[ ! -e $wt/src/tracked.txt && ! -e $wt/.gitignore && ! -e $wt/.git ]] || fail 'tracked file or .git left'
+! git worktree list | grep -qF "$wt" || fail 'worktree still registered'
+[[ ! -e $admin ]] || fail 'admin dir left'
+[[ -z $(git branch --list feat/c) ]] || fail 'branch feat/c not deleted'
+
+# A clean worktree directory is removed entirely.
+wt=$("$gwt_path" -b feat/d 2> /dev/null) || fail 'create feat/d'
+"$gwt_path" -d feat/d > /dev/null 2> "$tmp/out" || fail 'delete feat/d'
+[[ ! -e $wt ]] || fail 'clean worktree directory left'
+
+echo 'PASS: gwt-path follows renamed branches, refuses taken directories and keeps untracked files on -d'

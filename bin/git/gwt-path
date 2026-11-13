@@ -120,12 +120,33 @@ if [[ $delete_worktree == 1 ]]; then
     echo "Cannot remove the primary worktree: $primary" >&2
     exit 1
   fi
+  admin=$(git -C "$existing" rev-parse --absolute-git-dir)
+  if [[ -f $admin/locked ]]; then
+    echo "Worktree is locked: $existing" >&2
+    exit 1
+  fi
+  if [[ -n $(git -C "$existing" status --porcelain --untracked-files=no) ]]; then
+    echo "Worktree contains modified or staged files: $existing" >&2
+    exit 1
+  fi
   current=$(git rev-parse --show-toplevel)
-  git -C "$primary" worktree remove "$existing" >&2
+  # Unlike git worktree remove, keep untracked and ignored files (e.g. local
+  # env files or build caches): delete only tracked files, then unregister.
+  git -C "$existing" ls-files -z | (cd -- "$existing" && xargs -0 -r rm -f --)
+  rm -f -- "$existing/.git"
+  rm -rf -- "$admin"
+  find "$existing" -depth -type d -empty -delete
+  if [[ -e $existing ]]; then
+    echo "Kept untracked files in: $existing" >&2
+  fi
   if [[ $current == "$existing" ]]; then
     printf '%s\n' "$primary"
   else
     printf '%s\n' "$current"
+  fi
+  if ! git -C "$primary" branch -d "$local_branch" >&2; then
+    echo "Worktree removed, but branch $local_branch was not deleted; use git branch -D to force." >&2
+    exit 1
   fi
   exit 0
 fi

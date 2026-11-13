@@ -151,9 +151,12 @@ gwt() {
       [[ -n $selected ]] || return
       branch=${selected%%|*}
     fi
-    worktree_dir=$(gwt-path -d "$branch") || return
-    cd -- "$worktree_dir"
-    return
+    # gwt-path may print a directory and still fail (branch not deleted);
+    # cd anyway so the shell does not stay in the removed worktree.
+    worktree_dir=$(gwt-path -d "$branch")
+    local exit_code=$?
+    [[ -z $worktree_dir ]] || cd -- "$worktree_dir"
+    return $exit_code
   fi
   if [[ ${1:-} == -b ]]; then
     if (($# != 2)) || [[ -z $2 ]]; then
