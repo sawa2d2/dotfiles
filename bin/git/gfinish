@@ -2,16 +2,22 @@
 set -euo pipefail
 
 usage() {
-  echo 'Usage: gfinish [-y|--yes] [-m <message> | -- <message...>]' >&2
+  echo 'Usage: gfinish [-y|--yes] [--offline] [-m <message> | -- <message...>]' >&2
+  echo '  --offline  squash into local main against the cached origin/main; push nothing' >&2
 }
 
 assume_yes=false
+offline=false
 message=
 message_given=false
 while (($#)); do
   case $1 in
   -y | --yes)
     assume_yes=true
+    shift
+    ;;
+  --offline)
+    offline=true
     shift
     ;;
   -m)
@@ -119,33 +125,36 @@ if [[ -n ${AGENT_APPROVAL_DIR:-} ]]; then
   fi
 fi
 
-git fetch origin main
-# Auto-push only when the feature branch is strictly ahead of its remote.
-# Never force-push, and stop if the remote is ahead or has diverged.
-remote_feature=$(git ls-remote --heads origin "refs/heads/$feature") || {
-  echo "Could not check origin/$feature." >&2
-  exit 1
-}
-if [[ -n $remote_feature ]]; then
-  remote_sha=${remote_feature%%[[:space:]]*}
-  local_sha=$(git rev-parse HEAD)
-  if [[ $local_sha != "$remote_sha" ]]; then
-    # Fetch the exact remote tip so the ancestry check is reliable even
-    # when the remote-tracking ref is stale.
-    git fetch origin "refs/heads/$feature"
-    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
-      echo "Local $feature is behind or diverged from origin/$feature; synchronize it first." >&2
-      exit 1
-    fi
-    echo "Local $feature is ahead of origin/$feature; pushing."
-    git push origin "HEAD:refs/heads/$feature" || {
-      echo "Could not push $feature; stopping." >&2
-      exit 1
-    }
-    pushed_sha=$(git ls-remote --heads origin "refs/heads/$feature")
-    if [[ ${pushed_sha%%[[:space:]]*} != "$local_sha" ]]; then
-      echo "origin/$feature changed after push; stopping." >&2
-      exit 1
+# --offline works from the cached origin/main and leaves origin untouched.
+if ! $offline; then
+  git fetch origin main
+  # Auto-push only when the feature branch is strictly ahead of its remote.
+  # Never force-push, and stop if the remote is ahead or has diverged.
+  remote_feature=$(git ls-remote --heads origin "refs/heads/$feature") || {
+    echo "Could not check origin/$feature." >&2
+    exit 1
+  }
+  if [[ -n $remote_feature ]]; then
+    remote_sha=${remote_feature%%[[:space:]]*}
+    local_sha=$(git rev-parse HEAD)
+    if [[ $local_sha != "$remote_sha" ]]; then
+      # Fetch the exact remote tip so the ancestry check is reliable even
+      # when the remote-tracking ref is stale.
+      git fetch origin "refs/heads/$feature"
+      if ! git merge-base --is-ancestor "$remote_sha" "$local_sha"; then
+        echo "Local $feature is behind or diverged from origin/$feature; synchronize it first." >&2
+        exit 1
+      fi
+      echo "Local $feature is ahead of origin/$feature; pushing."
+      git push origin "HEAD:refs/heads/$feature" || {
+        echo "Could not push $feature; stopping." >&2
+        exit 1
+      }
+      pushed_sha=$(git ls-remote --heads origin "refs/heads/$feature")
+      if [[ ${pushed_sha%%[[:space:]]*} != "$local_sha" ]]; then
+        echo "origin/$feature changed after push; stopping." >&2
+        exit 1
+      fi
     fi
   fi
 fi
@@ -190,6 +199,9 @@ if [[ $current == "$primary" ]]; then
 else
   echo "Squash $feature into main, push, and remove its worktree."
 fi
+if $offline; then
+  echo "Offline: nothing is pushed to or deleted from origin."
+fi
 git diff --stat main "$feature"
 confirm "Continue?" || exit 0
 
@@ -218,7 +230,9 @@ if [[ -n $main_worktree ]]; then
 else
   git update-ref refs/heads/main "$result" "$old_main"
 fi
-git push origin main
+if ! $offline; then
+  git push origin main
+fi
 
 if [[ $current == "$primary" ]]; then
   # A branch can be checked out in one worktree only.
@@ -255,7 +269,7 @@ if [[ -n $old_name ]]; then
 fi
 git branch -D "$feature"
 
-if git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
+if ! $offline && git ls-remote --exit-code --heads origin "$feature" > /dev/null 2>&1; then
   if confirm "Delete remote branch origin/$feature?"; then
     git push origin --delete "$feature"
   fi
@@ -263,7 +277,7 @@ fi
 
 # Delete the old name only when nothing on it could be lost: it is on origin,
 # is not main, no other branch tracks it, and its tip is part of the feature.
-if [[ -n $old_name ]]; then
+if ! $offline && [[ -n $old_name ]]; then
   old_ref=$(git ls-remote --heads origin "refs/heads/$old_name" 2> /dev/null || true)
   old_sha=${old_ref%%[[:space:]]*}
   if [[ $upstream_remote != origin ]]; then
@@ -283,4 +297,13 @@ if [[ -n $old_name ]]; then
   fi
 fi
 
+if $offline; then
+  echo "Offline: once origin is reachable, run:"
+  echo "  git push origin main"
+  # The cached remote-tracking ref tells whether the branch was pushed.
+  if git rev-parse --verify -q "refs/remotes/origin/$feature" > /dev/null; then
+    echo "  git push origin --delete $feature"
+  fi
+  echo "If origin/main moved meanwhile, run 'git pull --rebase origin main' on main before pushing."
+fi
 echo "Finished: $feature -> main"

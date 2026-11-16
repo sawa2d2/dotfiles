@@ -278,4 +278,20 @@ cd "$tmp/repo"
 finished feat/j 1
 [[ ! -e $linked_marker && -e $marker ]] || fail 'feat/j: wrong marker used up'
 
-echo 'PASS: gfinish messages, renamed branches, worktrees, and agent approval'
+# --- Offline: with origin unreachable, gfinish fails unless --offline, which
+# squashes into local main, pushes nothing, and prints the follow-up commands.
+setup offline
+change feat/k
+git remote set-url origin "$tmp/missing.git"
+if "$gfinish" -y -m feat/k > "$tmp/out" 2>&1; then fail 'feat/k: unreachable origin accepted'; fi
+[[ $(git log -1 --format=%s main) == base && $(git branch --show-current) == feat/k ]] ||
+  fail 'feat/k: failed gfinish changed state'
+"$gfinish" -y --offline -m feat/k > "$tmp/out" 2>&1 || fail 'feat/k: offline gfinish failed'
+[[ $(git log -1 --format=%s main) == feat/k ]] || fail 'feat/k: local main'
+[[ -z $(git branch --list feat/k) ]] || fail 'feat/k: branch left'
+[[ $(git --git-dir="$tmp/origin.git" log -1 --format=%s main) == base ]] || fail 'feat/k: main pushed'
+[[ -n $(git --git-dir="$tmp/origin.git" branch --list feat/k) ]] || fail 'feat/k: remote branch deleted'
+grep -qx '  git push origin main' "$tmp/out" || fail 'feat/k: push command not printed'
+grep -qx '  git push origin --delete feat/k' "$tmp/out" || fail 'feat/k: delete command not printed'
+
+echo 'PASS: gfinish messages, renamed branches, worktrees, agent approval, and offline'
