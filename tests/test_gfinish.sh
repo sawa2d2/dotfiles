@@ -294,4 +294,20 @@ if "$gfinish" -y -m feat/k > "$tmp/out" 2>&1; then fail 'feat/k: unreachable ori
 grep -qx '  git push origin main' "$tmp/out" || fail 'feat/k: push command not printed'
 grep -qx '  git push origin --delete feat/k' "$tmp/out" || fail 'feat/k: delete command not printed'
 
+# A second offline run builds on the unpushed squash left on main.
+git switch -q -c feat/l main
+printf 'l\n' >> file
+git commit -qam feat/l
+"$gfinish" -y --offline -m feat/l > "$tmp/out" 2>&1 || fail 'feat/l: offline gfinish on unpushed main failed'
+[[ $(git log -2 --format=%s main) == $'feat/l\nfeat/k' ]] || fail 'feat/l: local main'
+[[ $(git --git-dir="$tmp/origin.git" log -1 --format=%s main) == base ]] || fail 'feat/l: main pushed'
+
+# Online, main ahead of origin/main still stops before anything changes.
+git remote set-url origin "$tmp/origin.git"
+change feat/m
+before=$(git rev-parse main)
+if "$gfinish" -y -m feat/m > "$tmp/out" 2>&1; then fail 'feat/m: main ahead of origin accepted'; fi
+grep -q 'Local main has commits not on origin/main' "$tmp/out" || fail 'feat/m: message'
+[[ $(git rev-parse main) == "$before" && $(git branch --show-current) == feat/m ]] || fail 'feat/m: state changed'
+
 echo 'PASS: gfinish messages, renamed branches, worktrees, agent approval, and offline'

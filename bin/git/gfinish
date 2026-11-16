@@ -160,13 +160,15 @@ if ! $offline; then
 fi
 # Fast-forward local main when it only trails origin/main.
 # Never discard local commits or update a dirty checked-out main worktree.
+# Offline, main may be ahead with squashes from earlier offline runs; keep them.
 primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 current=$(git rev-parse --show-toplevel)
 main_worktree=$(git worktree list --porcelain | awk '
   /^worktree / { path = substr($0, 10) }
   /^branch refs\/heads\/main$/ { print path; exit }
 ')
-if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]]; then
+if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]] &&
+  ! { $offline && git merge-base --is-ancestor origin/main main; }; then
   if ! git merge-base --is-ancestor main origin/main; then
     echo "Local main has commits not on origin/main; synchronize it manually." >&2
     exit 1
