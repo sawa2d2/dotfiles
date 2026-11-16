@@ -45,3 +45,21 @@ vim.keymap.set("n", "<leader>gd", function()
     origins[view] = origin
   end
 end, { desc = "Toggle Git diff (main...HEAD)" })
+
+-- Show filler lines as a plain background instead of '-' characters, and use
+-- git-delta's default palette: red for removed, green for added. Neovim has no
+-- per-side group for changed lines, so DiffChange/DiffText use the green set.
+vim.opt.fillchars:append({ diff = " " })
+
+local function apply_diff_highlights()
+  vim.api.nvim_set_hl(0, "DiffDelete", { fg = 0x3f0001, bg = 0x3f0001 })
+  vim.api.nvim_set_hl(0, "DiffAdd", { bg = 0x002800 })
+  vim.api.nvim_set_hl(0, "DiffChange", { bg = 0x002800 })
+  vim.api.nvim_set_hl(0, "DiffText", { bg = 0x006000 })
+end
+
+apply_diff_highlights()
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = vim.api.nvim_create_augroup("DotfilesDiffColors", { clear = true }),
+  callback = apply_diff_highlights,
+})
