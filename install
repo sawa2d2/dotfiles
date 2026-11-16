@@ -8,6 +8,10 @@ pull_current_branch() {
   [[ ${1:-false} == true || ${2:-false} == true ]] && return 0
   local branch upstream
   branch=$(git -C "$DOTPATH" symbolic-ref --quiet HEAD)
+  if [[ $branch != refs/heads/main ]]; then
+    echo "SKIP: git pull (current branch is not main)"
+    return 0
+  fi
   upstream=$(git -C "$DOTPATH" for-each-ref --format='%(upstream)' "$branch")
   if [[ -z "$upstream" ]]; then
     echo "SKIP: git pull (current branch has no upstream)"

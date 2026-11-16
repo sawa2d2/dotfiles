@@ -12,10 +12,10 @@ Clones into `~/dotfiles` (override with `DOTFILES_DIR`) and installs symlinks. E
 
 `./install` also installs nvm v0.40.8 if `~/.nvm` is absent. Existing nvm directories are left untouched; Node.js versions are not installed automatically. Bash and Zsh load nvm from the shared shell initialization. To install Node.js explicitly, run `nvm install --lts` in a new shell.
 
-`./install` first runs `git pull` when the current branch has an upstream and
-stops if pulling fails. On a branch without an upstream, it automatically skips
-pulling and installs the local checkout. Use `./install --no-pull` to skip
-pulling even when an upstream is configured. This also works with `--system`.
+`./install` first runs `git pull` when the current branch is `main` and has an
+upstream, and stops if pulling fails. On any other branch, or on `main` without
+an upstream, it automatically skips pulling and installs the local checkout.
+Use `./install --no-pull` to skip pulling on `main`. This also works with `--system`.
 `--dry-run` always skips pulling. Other installation steps may still download
 dependencies.
 

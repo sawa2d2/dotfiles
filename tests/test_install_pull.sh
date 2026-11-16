@@ -12,6 +12,7 @@ cp "$root/install" "$fixture/install"
 printf '%s\n' '# Test configuration' > "$fixture/home/.bashrc"
 git init -q "$fixture"
 git -C "$fixture" -c user.name=Test -c user.email=test@example.com commit --allow-empty -qm 'Test fixture'
+git -C "$fixture" branch -M main
 git -C "$fixture" branch base
 git -C "$fixture" branch --set-upstream-to=base > /dev/null
 cat > "$tmp/bin/git" <<'GIT'
@@ -42,6 +43,16 @@ GIT_PULL_STATUS=1 bash "$fixture/install" --no-pull --no-nix >"$tmp/output"
 [[ ! -e "$HOME/git-pulls" ]]
 [[ $(readlink "$HOME/.bashrc") == "$fixture/home/.bashrc" ]]
 
+# A non-main branch with an upstream is not pulled.
+git -C "$fixture" checkout -q -b feature
+git -C "$fixture" branch --set-upstream-to=base > /dev/null
+rm "$HOME/.bashrc"
+GIT_PULL_STATUS=1 bash "$fixture/install" --no-nix >"$tmp/output"
+[[ ! -e "$HOME/git-pulls" ]]
+[[ $(readlink "$HOME/.bashrc") == "$fixture/home/.bashrc" ]]
+grep -qF 'SKIP: git pull (current branch is not main)' "$tmp/output"
+
+git -C "$fixture" checkout -q main
 git -C "$fixture" branch --unset-upstream
 rm "$HOME/.bashrc"
 GIT_PULL_STATUS=1 bash "$fixture/install" >"$tmp/output"
@@ -62,4 +73,4 @@ GIT_PULL_STATUS=1 bash "$fixture/install" --system --no-pull --dry-run >"$tmp/ou
 GIT_PULL_STATUS=1 bash "$fixture/install" --system --dry-run --no-pull >"$tmp/output"
 [[ ! -e "$HOME/git-pulls" ]]
 
-echo 'PASS: install stops on pull failure and skips pull without an upstream, during dry-run, or with no-pull'
+echo 'PASS: install stops on pull failure and skips pull off main, without an upstream, during dry-run, or with no-pull'
