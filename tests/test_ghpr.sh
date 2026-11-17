@@ -5,24 +5,15 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-# Stub gh: GH_PR_STATE is the current branch's PR state, empty for none.
+# Fake only the origin URL as ORIGIN_URL; ls-remote still uses the local origin.
 mkdir "$TMP/bin"
-cat > "$TMP/bin/gh" << 'EOF'
+cat > "$TMP/bin/git" << EOF
 #!/usr/bin/env bash
-printf 'gh %s\n' "$*" >> "$LOG"
-case "$1 $2" in
-"pr view")
-  if [[ $3 == --json ]]; then
-    [[ -n $GH_PR_STATE ]] || {
-      echo 'no pull requests found' >&2
-      exit 1
-    }
-    printf '%s\n' "$GH_PR_STATE"
-  fi
-  ;;
-"repo view") echo 'https://github.com/owner/repo main' ;;
-*) exit 1 ;;
-esac
+if [[ "\$*" == 'remote get-url origin' ]]; then
+  printf '%s\n' "\$ORIGIN_URL"
+  exit
+fi
+exec $(command -v git) "\$@"
 EOF
 # Record browser launches instead of opening anything.
 cat > "$TMP/bin/xdg-open" << 'EOF'
@@ -31,7 +22,7 @@ printf 'open %s\n' "$1" >> "$LOG"
 EOF
 cp "$TMP/bin/xdg-open" "$TMP/bin/open"
 chmod +x "$TMP/bin/"*
-export PATH="$TMP/bin:$PATH" LOG="$TMP/log"
+export PATH="$TMP/bin:$PATH" LOG="$TMP/log" ORIGIN_URL=https://github.com/owner/repo.git
 
 git init -q -b main "$TMP/repo"
 cd "$TMP/repo"
@@ -45,7 +36,7 @@ git push -q origin feat/x
 run() {
   : > "$LOG"
   local status=0
-  GH_PR_STATE=$1 bash "$ROOT/bin/git/ghpr" 2> "$TMP/err" || status=$?
+  bash "$ROOT/bin/git/ghpr" 2> "$TMP/err" || status=$?
   # The Linux opener runs in the background.
   for _ in 1 2 3 4 5 6 7 8 9 10; do
     grep -q '^open ' "$LOG" && break
@@ -55,43 +46,46 @@ run() {
   return "$status"
 }
 
-# The default branch has no PR of its own: open the repository's top page.
+# The default branch (origin's HEAD) opens the repository's top page, whatever
+# form the origin URL takes.
 git switch -q main
-run OPEN
-grep -qx 'open https://github.com/owner/repo' "$LOG"
-if grep -q 'pr view' "$LOG"; then
-  echo 'FAIL: default branch looked up a PR' >&2
-  exit 1
-fi
+for ORIGIN_URL in https://github.com/owner/repo https://github.com/owner/repo.git \
+  git@github.com:owner/repo.git ssh://git@github.com/owner/repo.git; do
+  run
+  grep -qx 'open https://github.com/owner/repo' "$LOG" || {
+    echo "FAIL: $ORIGIN_URL opened: $(cat "$LOG")" >&2
+    exit 1
+  }
+done
+ORIGIN_URL=git@ghe.example.com:owner/repo
+run
+grep -qx 'open https://ghe.example.com/owner/repo' "$LOG"
+ORIGIN_URL=https://github.com/owner/repo.git
 git switch -q feat/x
 
-run OPEN
-grep -qx 'gh pr view --web' "$LOG"
-for state in '' MERGED CLOSED; do
-  run "$state"
-  grep -qx 'open https://github.com/owner/repo/compare/main...feat/x?expand=1' "$LOG"
-done
+run
+grep -qx 'open https://github.com/owner/repo/compare/main...feat/x?expand=1' "$LOG"
 
 # URL-special characters in the branch name are percent-encoded; / is kept.
 git switch -q -c 'feat/a#b%c&d+e猫'
 git push -q origin HEAD
-run ''
+run
 grep -qx 'open https://github.com/owner/repo/compare/main...feat/a%23b%25c%26d%2Be%E7%8C%AB?expand=1' "$LOG" || {
   echo "FAIL: branch name not encoded: $(cat "$LOG")" >&2
   exit 1
 }
 git switch -q feat/x
 
-# Never push: an unpushed branch is an error, not a push prompt.
+# Never push: an unpushed branch is an error, not a browser launch.
 git switch -q -c feat/local
 status=0
-run '' || status=$?
+run || status=$?
 ((status == 1))
 grep -q 'Remote branch not found: feat/local' "$TMP/err"
-if grep -q -e 'pr create' -e '^open ' "$LOG"; then
-  echo 'FAIL: unpushed branch reached gh pr create or the browser' >&2
+if grep -q '^open ' "$LOG"; then
+  echo 'FAIL: unpushed branch reached the browser' >&2
   exit 1
 fi
 [[ -z $(git ls-remote --heads origin feat/local) ]]
 
-echo 'PASS: ghpr opens an open PR, otherwise the compare page (the top page on the default branch), without pushing'
+echo 'PASS: ghpr opens the compare page (the top page on the default branch) from git alone, without pushing'

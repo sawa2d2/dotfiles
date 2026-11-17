@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Open the current branch's open PR, or else its compare page; on the default
-# branch, open the repository's top page. Never pushes: gh pr create --web
-# would offer to push an unpushed branch.
+# Open the current branch's compare page, which links to its open PR if any;
+# on the default branch, open the repository's top page. Uses only git, not the
+# GitHub API, and never pushes.
 set -euo pipefail
 
 if (($# != 0)); then
@@ -43,17 +43,34 @@ urlencode() {
   printf '%s\n' "$out"
 }
 
-repo=$(gh repo view --json url,defaultBranchRef --jq '.url + " " + .defaultBranchRef.name')
-read -r repo_url default_branch <<< "$repo"
+# Normalize the origin URL (https, scp-like or ssh://) to https://<host>/<owner>/<repo>.
+url=$(git remote get-url origin)
+url=${url%.git}
+case $url in
+https://*) repo_url=$url ;;
+ssh://*)
+  url=${url#ssh://}
+  repo_url=https://${url#*@}
+  ;;
+*@*:*)
+  url=${url#*@}
+  repo_url=https://${url%%:*}/${url#*:}
+  ;;
+*)
+  echo "Unsupported remote URL: $url" >&2
+  exit 1
+  ;;
+esac
+
+default_branch=$(git ls-remote --symref origin HEAD |
+  awk '$1 == "ref:" && $3 == "HEAD" { sub("^refs/heads/", "", $2); print $2 }')
+if [[ -z $default_branch ]]; then
+  echo "Default branch not found on origin." >&2
+  exit 1
+fi
 if [[ $branch == "$default_branch" ]]; then
   open_url "$repo_url"
   exit
-fi
-
-# gh pr view fails when the branch has no PR; merged or closed PRs are history.
-state=$(gh pr view --json state --jq .state 2> /dev/null) || state=
-if [[ $state == OPEN ]]; then
-  exec gh pr view --web
 fi
 
 if ! git ls-remote --exit-code --heads origin "refs/heads/$branch" > /dev/null; then
