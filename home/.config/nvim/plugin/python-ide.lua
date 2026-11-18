@@ -88,6 +88,7 @@ vim.lsp.config("pyright", {
 vim.lsp.enable("pyright")
 
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+vim.keymap.set("n", "<F12>", vim.lsp.buf.definition, { desc = "Go to definition" })
 -- Use a blank one-cell border as padding around hover documentation.
 local hover_border = {
   { " ", "DotfilesHoverPadding" },
