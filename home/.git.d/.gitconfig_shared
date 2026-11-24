@@ -76,7 +76,7 @@
     # highlight file names and use a fixed bright blue for decorations.
     file-style = bold "#1E1E2E" "#89B4FA"
     file-decoration-style = none
-    hunk-header-decoration-style = "#89B4FA" box
+    hunk-header-decoration-style = none
     hunk-header-line-number-style = "#89B4FA"
     hunk-header-file-style = "#89B4FA"
     # Wrap markers in side-by-side view.
