@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Merge several feature branches into a throwaway batch/<timestamp> branch for
+# manual testing before each is squash-merged on its own with gfinish. Batch
+# branches stay local: they are never pushed or merged into main.
+set -euo pipefail
+
+usage() {
+  echo 'Usage: gbatch <branch>... | gbatch --clean [--force]' >&2
+  echo '  <branch>...  merge the branches into a new batch/<timestamp> worktree from main' >&2
+  echo '  --clean      remove batch/* worktrees and branches (--force: even with changes)' >&2
+}
+
+clean=false
+force=false
+branches=()
+for arg in "$@"; do
+  case $arg in
+  --clean) clean=true ;;
+  --force) force=true ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    usage
+    exit 2
+    ;;
+  *) branches+=("$arg") ;;
+  esac
+done
+if { $clean && ((${#branches[@]})); } || { ! $clean && { $force || ((${#branches[@]} == 0)); }; }; then
+  usage
+  exit 2
+fi
+
+git rev-parse --is-inside-work-tree > /dev/null
+
+if $clean; then
+  remove_opts=()
+  $force && remove_opts+=(--force)
+  failed=0
+  while IFS= read -r branch; do
+    worktree=$(git worktree list --porcelain | awk -v ref="refs/heads/$branch" '
+      /^worktree / { path = substr($0, 10) }
+      /^branch / && substr($0, 8) == ref { print path; exit }
+    ')
+    # Without --force, git refuses worktrees with changes or untracked files.
+    if [[ -n $worktree ]] && ! git worktree remove "${remove_opts[@]}" "$worktree"; then
+      echo "Kept $branch: $worktree has changes (use --force)" >&2
+      failed=1
+      continue
+    fi
+    git branch -D -- "$branch" > /dev/null
+    echo "Removed $branch${worktree:+ ($worktree)}"
+  done < <(git for-each-ref --format='%(refname:short)' 'refs/heads/batch/')
+  exit "$failed"
+fi
+
+for branch in "${branches[@]}"; do
+  git rev-parse --verify --quiet "$branch^{commit}" > /dev/null || {
+    echo "No such branch: $branch" >&2
+    exit 1
+  }
+done
+
+batch=batch/$(date +%Y%m%d-%H%M)
+worktree=$("$(dirname -- "${BASH_SOURCE[0]}")/gwt-path" -b "$batch")
+# Record conflict resolutions so rebuilding the batch reuses them.
+git config rerere.enabled true
+
+for i in "${!branches[@]}"; do
+  branch=${branches[i]}
+  if ! git -C "$worktree" merge --no-ff --no-edit "$branch" >&2; then
+    echo "Merge of $branch conflicted in $worktree." >&2
+    rest=${branches[*]:i+1}
+    echo "Resolve and commit there, then merge the rest: ${rest:-(none)}" >&2
+    exit 1
+  fi
+done
+
+echo "Batch worktree: $worktree"
+echo 'Manual checks:'
+for branch in "${branches[@]}"; do
+  echo "$branch"
+  checks=$(git log --format='%(trailers:key=Manual-check,valueonly)' "main..$branch" | sed '/^$/d')
+  if [[ -n $checks ]]; then
+    printf '%s\n' "$checks" | sed 's/^/  - /'
+  else
+    echo '  (none)'
+  fi
+done

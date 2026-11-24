@@ -210,3 +210,14 @@ Use `--` before pathspecs (for example, `git df -p -- -p` to inspect a file
 named `-p`). `dfm` and `dfu` accept only the optional leading `-p`.
 This convenience option does not change native `git diff -p`, which means
 patch output. The `diffplain` alias remains available.
+
+## Batch testing branches
+
+`gbatch feat/a feat/b` creates a local `batch/<YYYYmmdd-HHMM>` branch from
+`main` in a new worktree (placed like `gwt`), enables `rerere` so resolved
+conflicts are reused when the batch is rebuilt, and merges the branches in
+order. It prints the worktree path and each branch's `Manual-check:` commit
+trailers as a checklist. On a conflict it stops and leaves the worktree for
+resolution. After testing, squash-merge each branch with `gfinish` and run
+`gbatch --clean` (`--force` to discard changes) to remove batch worktrees and
+branches. Batch branches are never pushed or merged into `main`.
