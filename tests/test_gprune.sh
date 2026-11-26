@@ -132,4 +132,39 @@ has_branch unmerged || fail 'unmerged branch removed'
 has_branch main || fail 'main removed'
 [[ $output == *"DELETE clean"*"$TMP/clean"* ]] || fail "worktree path not reported: $output"
 
-echo 'PASS: gprune squash-merged branches, quiet mode, and -w worktrees'
+# --- Squash comparison disambiguates branch names from files and directories.
+setup revision-path
+
+for branch in filebrowser directorybrowser dirtybrowser; do
+  git -C "$repo" worktree add -q -b "$branch" "$TMP/$branch"
+  collision_file=$branch
+  if [[ $branch == directorybrowser ]]; then
+    mkdir "$TMP/$branch/$branch"
+    collision_file=$branch/data
+  fi
+  printf 'one\n' > "$TMP/$branch/$collision_file"
+  git -C "$TMP/$branch" add "$branch"
+  git -C "$TMP/$branch" commit -qm one
+  printf 'two\n' >> "$TMP/$branch/$collision_file"
+  git -C "$TMP/$branch" commit -qam two
+  git -C "$repo" merge --squash -q "$branch" > /dev/null
+  git -C "$repo" commit -qm "squash $branch"
+done
+git -C "$repo" push -q origin main
+printf 'retained data\n' > "$TMP/dirtybrowser/untracked"
+
+output=$(cd "$repo" && "$ROOT/bin/git/gprune" -w 2>&1) || fail "gprune -w failed: $output"
+[[ $output != *'ambiguous argument'* ]] || fail "revision/path collision: $output"
+for branch in filebrowser directorybrowser; do
+  has_branch "$branch" && fail "$branch squash-merged branch kept: $output"
+  [[ ! -d $TMP/$branch ]] || fail "$branch clean worktree kept"
+  [[ $output == *"DELETE $branch"* ]] || fail "$branch deletion not reported: $output"
+done
+[[ $(cat "$repo/filebrowser") == $'one\ntwo' ]] || fail 'main file lost'
+[[ $(cat "$repo/directorybrowser/data") == $'one\ntwo' ]] || fail 'main directory data lost'
+has_branch dirtybrowser || fail 'dirty colliding branch removed'
+[[ $(cat "$TMP/dirtybrowser/untracked") == 'retained data' ]] || fail 'untracked data lost'
+[[ $output == *'SKIP dirtybrowser'* ]] || fail "dirty worktree not reported as skipped: $output"
+[[ $output == *'Deleted 2 local branch(es).'* ]] || fail "wrong deletion count: $output"
+
+echo 'PASS: gprune squash-merged branches, quiet mode, -w worktrees, and revision/path collisions'
