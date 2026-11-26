@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# gfinish squash-merges the current branch into main and removes it. Each
+# gfinish squash-merges into the origin default branch and removes the feature. Each
 # section below starts from a fresh origin and clone under $tmp.
 set -euo pipefail
 
@@ -18,18 +18,20 @@ fail() {
   exit 1
 }
 
-# Create $tmp_root/$1 with origin.git and a clone at repo whose main has one
+# Create $tmp_root/$1 with origin.git and a clone at repo whose default has one
 # commit pushed, and cd into the clone.
 setup() {
   tmp=$tmp_root/$1
-  git init --bare -q -b main "$tmp/origin.git"
+  test_default=${2:-main}
+  git init --bare -q -b "$test_default" "$tmp/origin.git"
   git clone -q "$tmp/origin.git" "$tmp/repo" 2> /dev/null
   cd "$tmp/repo"
-  git switch -q -c main
+  git switch -q -c "$test_default"
   printf 'base\n' > file
   git add file
   git commit -qm base
-  git push -q -u origin main
+  git push -q -u origin "$test_default"
+  git symbolic-ref refs/remotes/origin/HEAD "refs/remotes/origin/$test_default"
 }
 
 finish() { "$gfinish" -y -m "$1" > "$tmp/out" 2>&1 || fail "$1: gfinish failed"; }
@@ -174,7 +176,7 @@ git worktree add -q "$tmp/main-wt" main
 printf 'dirty\n' >> "$tmp/main-wt/file"
 before=$(git rev-parse main)
 if "$gfinish" -y -m feat/d > "$tmp/out" 2>&1; then fail 'feat/d: dirty main worktree accepted'; fi
-grep -q 'Main worktree has uncommitted changes' "$tmp/out" || fail 'feat/d: message'
+grep -q 'main worktree has uncommitted changes' "$tmp/out" || fail 'feat/d: message'
 [[ $(git rev-parse main) == "$before" && $(git branch --show-current) == feat/d ]] || fail 'feat/d: state changed'
 git -C "$tmp/main-wt" checkout -q -- file
 git worktree remove "$tmp/main-wt"
@@ -310,4 +312,94 @@ if "$gfinish" -y -m feat/m > "$tmp/out" 2>&1; then fail 'feat/m: main ahead of o
 grep -q 'Local main has commits not on origin/main' "$tmp/out" || fail 'feat/m: message'
 [[ $(git rev-parse main) == "$before" && $(git branch --show-current) == feat/m ]] || fail 'feat/m: state changed'
 
-echo 'PASS: gfinish messages, renamed branches, worktrees, agent approval, and offline'
+# --- Default branch resolution: online origin HEAD overrides a stale cache.
+setup master master
+git branch main
+git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+before_main=$(git rev-parse main)
+git worktree add -q -b feat/master "$tmp/feature" master
+(
+  cd "$tmp/feature"
+  printf 'master change\n' >> file
+  git commit -qam 'master change'
+  finish 'master squash'
+)
+[[ ! -e $tmp/feature && $(git log -1 --format=%s master) == 'master squash' ]] || fail 'master: worktree or local target'
+[[ $(git --git-dir="$tmp/origin.git" log -1 --format=%s master) == 'master squash' ]] || fail 'master: remote target'
+[[ $(git rev-parse main) == "$before_main" ]] || fail 'master: main changed'
+grep -qx 'Finished: feat/master -> master' "$tmp/out" || fail 'master: result message'
+if "$gfinish" -y > "$tmp/out" 2>&1; then fail 'master: default branch accepted'; fi
+grep -qx 'Run gfinish from a feature branch.' "$tmp/out" || fail 'master: default branch rejection'
+
+# A renamed default must never be deleted as the feature's old remote name.
+git branch -m feat/renamed-master
+git branch --no-track master origin/master
+printf 'renamed\n' >> file
+git commit -qam renamed
+finish 'renamed master'
+on_origin master || fail 'master: old default name deleted'
+grep -qx 'Kept origin/master (old name of feat/renamed-master): it is master.' "$tmp/out" || fail 'master: old name protection'
+
+# The default can have another name, and main can be a feature branch.
+setup custom-default trunk
+git switch -q -c main
+printf 'custom\n' >> file
+git commit -qam custom
+finish 'custom squash'
+[[ $(git branch --show-current) == trunk ]] || fail 'trunk: did not switch to default'
+[[ $(git --git-dir="$tmp/origin.git" log -1 --format=%s trunk) == 'custom squash' ]] || fail 'trunk: remote target'
+
+# An origin with no advertised symbolic HEAD must not fall back to main.
+setup unresolved
+git switch -q -c feat/unresolved
+printf 'unresolved\n' >> file
+git commit -qam unresolved
+before=$(git rev-parse main)
+git --git-dir="$tmp/origin.git" symbolic-ref HEAD refs/heads/missing
+if "$gfinish" -y > "$tmp/out" 2>&1; then fail 'unresolved: online default guessed'; fi
+grep -qx 'Could not resolve origin default branch.' "$tmp/out" || fail 'unresolved: online message'
+[[ $(git rev-parse main) == "$before" && $(git branch --show-current) == feat/unresolved ]] || fail 'unresolved: online state changed'
+
+# Offline master uses cached HEAD without making any network-capable calls.
+setup offline-master master
+git switch -q -c feat/offline-master
+printf 'offline master\n' >> file
+git commit -qam 'offline master'
+git push -q origin feat/offline-master
+git remote set-url origin "$tmp/missing.git"
+mkdir "$tmp/no-network"
+real_git=$(command -v git)
+cat > "$tmp/no-network/git" << 'NO_NETWORK'
+#!/usr/bin/env bash
+case $1 in
+fetch | ls-remote | push) echo "Unexpected network command: $*" >&2; exit 99 ;;
+esac
+exec "$REAL_GIT" "$@"
+NO_NETWORK
+chmod +x "$tmp/no-network/git"
+REAL_GIT=$real_git PATH="$tmp/no-network:$PATH" "$gfinish" -y --offline -m 'offline master squash' > "$tmp/out" 2>&1 || fail 'offline master: gfinish failed'
+[[ $(git log -1 --format=%s master) == 'offline master squash' ]] || fail 'offline master: local target'
+[[ $(git --git-dir="$tmp/origin.git" log -1 --format=%s master) == base ]] || fail 'offline master: pushed'
+[[ -n $(git --git-dir="$tmp/origin.git" branch --list feat/offline-master) ]] || fail 'offline master: remote branch deleted'
+grep -qx '  git push origin master' "$tmp/out" || fail 'offline master: push followup'
+grep -qx '  git push origin --delete feat/offline-master' "$tmp/out" || fail 'offline master: delete followup'
+grep -q "git pull --rebase origin master' on master" "$tmp/out" || fail 'offline master: rebase followup'
+
+# Missing cached HEAD or target refs fail before consuming approval or merging.
+git switch -q -c feat/missing-cache
+printf 'missing cache\n' >> file
+git commit -qam 'missing cache'
+mkdir "$tmp/approval"
+marker=$tmp/approval/$(printf %s "$(realpath "$tmp/repo")" | sha256sum | cut -c1-64)
+touch "$marker"
+before=$(git rev-parse master)
+git symbolic-ref --delete refs/remotes/origin/HEAD
+if REAL_GIT=$real_git PATH="$tmp/no-network:$PATH" AGENT_APPROVAL_DIR="$tmp/approval" "$gfinish" -y --offline > "$tmp/out" 2>&1; then fail 'offline: missing cached HEAD accepted'; fi
+grep -qx 'Could not resolve cached origin default branch (origin/HEAD).' "$tmp/out" || fail 'offline: missing cache message'
+git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/master
+git update-ref -d refs/remotes/origin/master
+if REAL_GIT=$real_git PATH="$tmp/no-network:$PATH" AGENT_APPROVAL_DIR="$tmp/approval" "$gfinish" -y --offline > "$tmp/out" 2>&1; then fail 'offline: missing cached target accepted'; fi
+grep -qx 'Required default branch ref is unavailable: refs/remotes/origin/master' "$tmp/out" || fail 'offline: missing target message'
+[[ -e $marker && $(git rev-parse master) == "$before" && $(git branch --show-current) == feat/missing-cache ]] || fail 'offline: unresolved default changed state or consumed approval'
+
+echo 'PASS: gfinish messages, renamed branches, worktrees, agent approval, offline, and default branches'

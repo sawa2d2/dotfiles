@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   echo 'Usage: gfinish [-y|--yes] [--offline] [-m <message> | -- <message...>]' >&2
-  echo '  --offline  squash into local main against the cached origin/main; push nothing' >&2
+  echo '  --offline  squash into the cached origin default branch locally; push nothing' >&2
 }
 
 assume_yes=false
@@ -69,8 +69,8 @@ write_squash_message() {
     printf '%s\n' "$message" > "$file"
     return
   fi
-  printf '%s\n\n# Squash of %s into main. Lines starting with # are ignored;\n# an empty message aborts.\n' \
-    "$message" "$feature" > "$file"
+  printf '%s\n\n# Squash of %s into %s. Lines starting with # are ignored;\n# an empty message aborts.\n' \
+    "$message" "$feature" "$default_branch" > "$file"
   # GIT_EDITOR may hold arguments (e.g. "code --wait"); let the shell split it.
   editor=$(git var GIT_EDITOR)
   eval "$editor \"\$file\"" || return
@@ -100,10 +100,6 @@ if ! $message_given; then
   fi
 fi
 
-if [[ $feature == main ]]; then
-  echo "Run gfinish from a feature branch." >&2
-  exit 1
-fi
 if [[ -n $(git status --porcelain) ]]; then
   echo "Commit or stash changes before running gfinish." >&2
   exit 1
@@ -125,9 +121,40 @@ if [[ -n ${AGENT_APPROVAL_DIR:-} ]]; then
   fi
 fi
 
-# --offline works from the cached origin/main and leaves origin untouched.
+# Resolve origin's advertised default online; offline, use only its cached HEAD.
+if $offline; then
+  default_ref=$(git symbolic-ref --quiet refs/remotes/origin/HEAD) || {
+    echo "Could not resolve cached origin default branch (origin/HEAD)." >&2
+    exit 1
+  }
+  default_branch=${default_ref#refs/remotes/origin/}
+else
+  remote_head=$(git ls-remote --symref origin HEAD) || {
+    echo "Could not resolve origin default branch." >&2
+    exit 1
+  }
+  default_branch=$(awk '$1 == "ref:" && $2 ~ /^refs\/heads\// && $3 == "HEAD" {
+    sub(/^refs\/heads\//, "", $2); print $2; exit
+  }' <<< "$remote_head")
+fi
+if [[ -z $default_branch ]] || ! git check-ref-format "refs/heads/$default_branch"; then
+  echo "Could not resolve origin default branch." >&2
+  exit 1
+fi
+if [[ $feature == "$default_branch" ]]; then
+  echo "Run gfinish from a feature branch." >&2
+  exit 1
+fi
 if ! $offline; then
-  git fetch origin main
+  git fetch origin "refs/heads/$default_branch:refs/remotes/origin/$default_branch"
+fi
+for ref in "refs/heads/$default_branch" "refs/remotes/origin/$default_branch"; do
+  if ! git rev-parse --verify --quiet "$ref^{commit}" > /dev/null; then
+    echo "Required default branch ref is unavailable: $ref" >&2
+    exit 1
+  fi
+done
+if ! $offline; then
   # Auto-push only when the feature branch is strictly ahead of its remote.
   # Never force-push, and stop if the remote is ahead or has diverged.
   remote_feature=$(git ls-remote --heads origin "refs/heads/$feature") || {
@@ -158,61 +185,61 @@ if ! $offline; then
     fi
   fi
 fi
-# Fast-forward local main when it only trails origin/main.
-# Never discard local commits or update a dirty checked-out main worktree.
-# Offline, main may be ahead with squashes from earlier offline runs; keep them.
+# Fast-forward the local default branch when it only trails origin.
+# Never discard local commits or update a dirty default-branch worktree.
+# Offline, keep squashes from earlier offline runs that are still unpushed.
 primary=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
 current=$(git rev-parse --show-toplevel)
-main_worktree=$(git worktree list --porcelain | awk '
+default_worktree=$(git worktree list --porcelain | awk -v target="refs/heads/$default_branch" '
   /^worktree / { path = substr($0, 10) }
-  /^branch refs\/heads\/main$/ { print path; exit }
+  $1 == "branch" && $2 == target { print path; exit }
 ')
-if [[ $(git rev-parse main) != $(git rev-parse origin/main) ]] &&
-  ! { $offline && git merge-base --is-ancestor origin/main main; }; then
-  if ! git merge-base --is-ancestor main origin/main; then
-    echo "Local main has commits not on origin/main; synchronize it manually." >&2
+if [[ $(git rev-parse "$default_branch") != $(git rev-parse "origin/$default_branch") ]] &&
+  ! { $offline && git merge-base --is-ancestor "origin/$default_branch" "$default_branch"; }; then
+  if ! git merge-base --is-ancestor "$default_branch" "origin/$default_branch"; then
+    echo "Local $default_branch has commits not on origin/$default_branch; synchronize it manually." >&2
     exit 1
   fi
-  if [[ -n $main_worktree ]]; then
-    if [[ -n $(git -C "$main_worktree" status --porcelain) ]]; then
-      echo "Main worktree has uncommitted changes: $main_worktree" >&2
+  if [[ -n $default_worktree ]]; then
+    if [[ -n $(git -C "$default_worktree" status --porcelain) ]]; then
+      echo "$default_branch worktree has uncommitted changes: $default_worktree" >&2
       exit 1
     fi
-    git -C "$main_worktree" merge --ff-only origin/main
+    git -C "$default_worktree" merge --ff-only "origin/$default_branch"
   else
-    git branch -f main origin/main
+    git branch -f "$default_branch" "origin/$default_branch"
   fi
 fi
-if git diff --quiet main "$feature"; then
+if git diff --quiet "$default_branch" "$feature"; then
   echo "No changes to integrate." >&2
   exit 1
 fi
 
-# main may be checked out in any worktree, or in none. The squash is built
+# The default branch may be checked out in any worktree, or in none. The squash is built
 # from trees alone, so no checkout (or checkout filter such as Git LFS) runs
-# until main is advanced.
-if [[ -n $main_worktree && -n $(git -C "$main_worktree" status --porcelain) ]]; then
-  echo "Main worktree has uncommitted changes: $main_worktree" >&2
+# until the default branch is advanced.
+if [[ -n $default_worktree && -n $(git -C "$default_worktree" status --porcelain) ]]; then
+  echo "$default_branch worktree has uncommitted changes: $default_worktree" >&2
   exit 1
 fi
 
 if [[ $current == "$primary" ]]; then
-  echo "Squash $feature into main, then push and remove the local branch."
+  echo "Squash $feature into $default_branch, then push and remove the local branch."
 else
-  echo "Squash $feature into main, push, and remove its worktree."
+  echo "Squash $feature into $default_branch, push, and remove its worktree."
 fi
 if $offline; then
   echo "Offline: nothing is pushed to or deleted from origin."
 fi
-git diff --stat main "$feature"
+git diff --stat "$default_branch" "$feature"
 confirm "Continue?" || exit 0
 
 if [[ -n $approval_marker ]]; then
   rm -f -- "$approval_marker"
 fi
-old_main=$(git rev-parse main)
-if ! merged=$(git merge-tree --write-tree --name-only "$old_main" "$feature"); then
-  echo "Squash of $feature into main conflicts; merge main into $feature first:" >&2
+old_default=$(git rev-parse "$default_branch")
+if ! merged=$(git merge-tree --write-tree --name-only "$old_default" "$feature"); then
+  echo "Squash of $feature into $default_branch conflicts; merge $default_branch into $feature first:" >&2
   # After the tree ID: conflicted paths, a blank line, then merge messages.
   sed -n '2,/^$/p' <<< "$merged" | sed '/^$/d; s/^/  /' >&2
   exit 1
@@ -220,29 +247,29 @@ fi
 message_file=$(mktemp)
 trap 'rm -f -- "$message_file"' EXIT
 if ! write_squash_message "$message_file"; then
-  echo "Squash commit was not made; main is unchanged." >&2
+  echo "Squash commit was not made; $default_branch is unchanged." >&2
   exit 1
 fi
-result=$(git commit-tree "${merged%%$'\n'*}" -p "$old_main" -F "$message_file")
+result=$(git commit-tree "${merged%%$'\n'*}" -p "$old_default" -F "$message_file")
 
-# Advance main where it lives: fast-forward its worktree, or move the ref
+# Advance the default branch: fast-forward its worktree, or move the ref
 # (only if it still points where it did) when nothing has it checked out.
-if [[ -n $main_worktree ]]; then
-  git -C "$main_worktree" merge --ff-only "$result"
+if [[ -n $default_worktree ]]; then
+  git -C "$default_worktree" merge --ff-only "$result"
 else
-  git update-ref refs/heads/main "$result" "$old_main"
+  git update-ref "refs/heads/$default_branch" "$result" "$old_default"
 fi
 if ! $offline; then
-  git push origin main
+  git push origin "$default_branch"
 fi
 
 if [[ $current == "$primary" ]]; then
   # A branch can be checked out in one worktree only.
-  if [[ -n $main_worktree ]]; then
-    git switch -q --detach main
-    echo "main is checked out in $main_worktree; left $current detached at main."
+  if [[ -n $default_worktree ]]; then
+    git switch -q --detach "$default_branch"
+    echo "$default_branch is checked out in $default_worktree; left $current detached at $default_branch."
   else
-    git switch -q main
+    git switch -q "$default_branch"
   fi
 else
   # Move the helper process away before deleting its current worktree.
@@ -278,7 +305,7 @@ if ! $offline && git ls-remote --exit-code --heads origin "$feature" > /dev/null
 fi
 
 # Delete the old name only when nothing on it could be lost: it is on origin,
-# is not main, no other branch tracks it, and its tip is part of the feature.
+# is not the default branch, no other branch tracks it, and its tip is in the feature.
 if ! $offline && [[ -n $old_name ]]; then
   old_ref=$(git ls-remote --heads origin "refs/heads/$old_name" 2> /dev/null || true)
   old_sha=${old_ref%%[[:space:]]*}
@@ -286,8 +313,8 @@ if ! $offline && [[ -n $old_name ]]; then
     echo "Kept $upstream_remote/$old_name (old name of $feature): not on origin."
   elif [[ -z $old_sha ]]; then
     :
-  elif [[ $old_name == main ]]; then
-    echo "Kept origin/main (old name of $feature): it is main."
+  elif [[ $old_name == "$default_branch" ]]; then
+    echo "Kept origin/$default_branch (old name of $feature): it is $default_branch."
   elif [[ -n $old_name_trackers ]]; then
     echo "Kept origin/$old_name (old name of $feature): also tracked by ${old_name_trackers//$'\n'/, }."
   elif ! git fetch -q origin "refs/heads/$old_name" ||
@@ -301,11 +328,11 @@ fi
 
 if $offline; then
   echo "Offline: once origin is reachable, run:"
-  echo "  git push origin main"
+  echo "  git push origin $default_branch"
   # The cached remote-tracking ref tells whether the branch was pushed.
   if git rev-parse --verify -q "refs/remotes/origin/$feature" > /dev/null; then
     echo "  git push origin --delete $feature"
   fi
-  echo "If origin/main moved meanwhile, run 'git pull --rebase origin main' on main before pushing."
+  echo "If origin/$default_branch moved meanwhile, run 'git pull --rebase origin $default_branch' on $default_branch before pushing."
 fi
-echo "Finished: $feature -> main"
+echo "Finished: $feature -> $default_branch"
